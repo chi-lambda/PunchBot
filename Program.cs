@@ -2,12 +2,15 @@ namespace PunchBotCore;
 
 public class Program
 {
+    private const string dbFilename = "times.db";
+
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
         builder.Services.AddControllersWithViews();
+        builder.Services.AddSingleton(new LiteDB.LiteDatabase(dbFilename));
 
         var app = builder.Build();
 

@@ -7,8 +7,13 @@ namespace PunchBotCore.Controllers
 {
     public class HomeController : Controller
     {
-        private const string dbFilename = "times.db";
         private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
+        private readonly LiteDatabase _db;
+
+        public HomeController(LiteDatabase db)
+        {
+            _db = db;
+        }
 
         public ActionResult Index()
         {
@@ -17,17 +22,16 @@ namespace PunchBotCore.Controllers
 
         private IndexData GetIndexData()
         {
-            using var db = new LiteDatabase(dbFilename);
-            var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
             var lastEntry = col.FindOne(Query.All(Query.Descending));
             var now = DateTime.Now;
-            var totalSum = db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var totalSum = _db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var numDays = col.FindAll().GroupBy(x => x.Time.Date).Count();
             var remainingTime = numDays * DailyWorkTime - totalSum;
-            var daySum = db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-            var dayBreakSum = db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var indexData = new IndexData(
-                weekSum: db.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
+                weekSum: _db.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
                 daySum: daySum,
                 lastEntry: lastEntry,
                 remainingTime: remainingTime,
@@ -40,10 +44,9 @@ namespace PunchBotCore.Controllers
         [HttpPost]
         public ActionResult Punch()
         {
-            using var db = new LiteDatabase(dbFilename);
             var now = DateTime.Now;
 
-            var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
 
             var lastEntry = col.FindOne(Query.All(Query.Descending));
             var lastTime = lastEntry?.Time ?? now;
@@ -58,12 +61,11 @@ namespace PunchBotCore.Controllers
         [HttpPost]
         public ActionResult Holiday()
         {
-            using var db = new LiteDatabase(dbFilename);
             var today = DateTime.Today;
             var startTime = today.AddHours(8);
             var endTime = startTime + DailyWorkTime;
 
-            var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
 
             col.Insert(new PunchEntry { Kind = Kind.In, Time = startTime });
             col.Insert(new PunchEntry { Kind = Kind.Out, Time = endTime });
@@ -72,42 +74,37 @@ namespace PunchBotCore.Controllers
 
         public ActionResult Week()
         {
-            using var db = new LiteDatabase(dbFilename);
-            var week = new Week { TimeSpans = db.GetWeeklyTimeSpans(DateTime.Now) };
+            var week = new Week { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
             return View(week);
         }
 
         // public ActionResult Clear()
         // {
-        //     using var db = new LiteDatabase(dbFilename);
-        //     db.DropCollection(PunchEntry.TableName);
+        //     using var _db = new LiteDatabase(dbFilename);
+        //     _db.DropCollection(PunchEntry.TableName);
         //     return Redirect("Index");
         // }
 
         public ActionResult ListAll()
         {
-            using var db = new LiteDatabase(dbFilename);
-            return View(db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll().OrderByDescending(x => x.Time).ToList());
+            return View(_db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll().OrderByDescending(x => x.Time).ToList());
         }
 
         public ActionResult Edit(int id)
         {
-            using var db = new LiteDatabase(dbFilename);
-            return View(db.GetCollection<PunchEntry>(PunchEntry.TableName).FindById(id));
+            return View(_db.GetCollection<PunchEntry>(PunchEntry.TableName).FindById(id));
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public ActionResult Edit(PunchEntry entry)
         {
-            using var db = new LiteDatabase(dbFilename);
-            db.GetCollection<PunchEntry>(PunchEntry.TableName).Update(entry);
+            _db.GetCollection<PunchEntry>(PunchEntry.TableName).Update(entry);
             return RedirectToAction("ListAll");
         }
 
         public ActionResult Delete(int id)
         {
-            using var db = new LiteDatabase(dbFilename);
-            var deleted = db.GetCollection<PunchEntry>(PunchEntry.TableName).Delete(id);
+            var deleted = _db.GetCollection<PunchEntry>(PunchEntry.TableName).Delete(id);
             return RedirectToAction("ListAll");
         }
 
