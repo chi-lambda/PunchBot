@@ -31,4 +31,10 @@
     }
 }
 
+@using (Html.BeginForm(controllerName: "Home", actionName: nameof(PunchBotCore.Controllers.HomeController.Holiday), method: FormMethod.Post))
+{
+        <div><input type="submit" id="holiday" class="w3-button w3-yellow punch-button w3-padding-48 w3-block"
+                value="Holiday" /></div>
+}
+
 <div id="error"></div>

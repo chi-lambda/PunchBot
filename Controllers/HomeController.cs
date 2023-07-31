@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Util;
@@ -52,6 +52,21 @@ namespace PunchBotCore.Controllers
             var message = lastKind == Kind.In ? $"Punched out after {now - lastTime}" : $"Punched in";
 
             col.Insert(new PunchEntry { Kind = lastKind == Kind.In ? Kind.Out : Kind.In, Time = now });
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public ActionResult Holiday()
+        {
+            using var db = new LiteDatabase(dbFilename);
+            var today = DateTime.Today;
+            var startTime = today.AddHours(8);
+            var endTime = startTime + DailyWorkTime;
+
+            var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+
+            col.Insert(new PunchEntry { Kind = Kind.In, Time = startTime });
+            col.Insert(new PunchEntry { Kind = Kind.Out, Time = endTime });
             return RedirectToAction("Index");
         }
 
