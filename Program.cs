@@ -19,12 +19,12 @@ public class Program
             app.UseHsts();
         }
 
-        app.UseHttpsRedirection();
+        // app.UseHttpsRedirection();
         app.UseStaticFiles();
 
         app.UseRouting();
 
-        app.UseAuthorization();
+        // app.UseAuthorization();
 
         app.MapControllerRoute(
             name: "default",
