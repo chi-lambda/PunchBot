@@ -49,10 +49,7 @@ namespace PunchBotCore.Controllers
             var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
 
             var lastEntry = col.FindOne(Query.All(Query.Descending));
-            var lastTime = lastEntry?.Time ?? now;
             var lastKind = lastEntry?.Kind ?? Kind.Out;
-
-            var message = lastKind == Kind.In ? $"Punched out after {now - lastTime}" : $"Punched in";
 
             col.Insert(new PunchEntry { Kind = lastKind == Kind.In ? Kind.Out : Kind.In, Time = now });
             return RedirectToAction("Index");
@@ -104,7 +101,7 @@ namespace PunchBotCore.Controllers
 
         public ActionResult Delete(int id)
         {
-            var deleted = _db.GetCollection<PunchEntry>(PunchEntry.TableName).Delete(id);
+            _db.GetCollection<PunchEntry>(PunchEntry.TableName).Delete(id);
             return RedirectToAction("ListAll");
         }
 
