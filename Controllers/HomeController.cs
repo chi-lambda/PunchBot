@@ -8,8 +8,9 @@ namespace PunchBotCore.Controllers
     public class HomeController : Controller
     {
         //private String dbFilename = @"d:\home\db\times.db";
-        private const string dbFilename = @"r:\times.db";
+        private const string dbFilename = @"times.db";
         private readonly TimeUtils timeUtils = new();
+        private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
 
         public ActionResult Index()
         {
@@ -24,7 +25,7 @@ namespace PunchBotCore.Controllers
             var now = DateTime.Now;
             var totalSum = timeUtils.GetAllTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var numDays = col.FindAll().GroupBy(x => x.Time.Date).Count();
-            var remainingTime = numDays * (new TimeSpan(8, 0, 0)) - totalSum;
+            var remainingTime = numDays * DailyWorkTime - totalSum;
             var daySum = timeUtils.GetDailyTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var dayBreakSum = timeUtils.GetDailyBreakTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var indexData = new IndexData(
@@ -73,7 +74,7 @@ namespace PunchBotCore.Controllers
         public ActionResult ListAll()
         {
             using var db = new LiteDatabase(dbFilename);
-            return View(db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll().OrderByDescending(x => x.Time));
+            return View(db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll().OrderByDescending(x => x.Time).ToList());
         }
 
         public ActionResult Edit(int id)
