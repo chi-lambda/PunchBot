@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Util;
@@ -7,8 +7,7 @@ namespace PunchBotCore.Controllers
 {
     public class HomeController : Controller
     {
-        private const string dbFilename = @"times.db";
-        private readonly TimeUtils timeUtils = new();
+        private const string dbFilename = "times.db";
         private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
 
         public ActionResult Index()
