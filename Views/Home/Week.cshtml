@@ -1,0 +1,39 @@
+﻿@model PunchBotCore2.Models.Week
+
+@{
+    ViewBag.Title = "Week";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Week</h2>
+
+<div>
+    <table class="w3-table w3-striped w3-hover">
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in Model.TimeSpans)
+            {
+                <tr>
+                    <td>@entry.Start.DayOfWeek</td>
+                    <td>@entry.Start.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@(entry.End?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
+                    <td>@entry.Duration.ToString(@"hh\:mm")</td>
+                </tr>
+            }
+            <tr>
+                <td></td><td></td><td></td>
+                <td><strong>@Model.Sum.ToString(@"hh\:mm")</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p>
+    @Html.ActionLink("Back to List", "Index")
+</p>

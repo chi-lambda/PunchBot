@@ -1,0 +1,37 @@
+﻿@model IEnumerable<PunchBotCore2.Models.PunchEntry>
+
+@{
+    ViewBag.Title = "ListAll";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>ListAll</h2>
+
+<table class="w3-table w3-striped w3-hoverable">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Time</th>
+            <th>Kind</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var entry in Model)
+        {
+            <tr>
+                <td>@entry.Id</td>
+                <td>@entry.Time</td>
+                <td>@entry.Kind</td>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", new { id = entry.Id }, new { @class = "w3-button w3-green" })
+                    @Html.ActionLink("Delete", "Delete", new { id = entry.Id }, new { @class = "w3-button w3-red" })
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    @Html.ActionLink("Back to List", "Index")
+</p>

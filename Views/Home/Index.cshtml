@@ -1,8 +1,34 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model PunchBotCore2.Models.IndexData
+
+<div>@Html.ActionLink("Weekly Overview", "Week", routeValues: null, htmlAttributes: new { @class = "w3-button w3-blue" })</div>
+
+@if (Model.DaySum > TimeSpan.Zero)
+{
+    <div>Work today: @Model.DaySum.ToString("hh\\:mm")</div>
+}
+@if (Model.WeekSum > TimeSpan.Zero)
+{
+    <div>Work this week: @Model.WeekSum.ToString("hh\\:mm")</div>
+}
+@if (Model.DaySum > TimeSpan.Zero)
+{
+    <div>Remaining time: @Model.RemainingTimeSign@Model.RemainingTime.ToString("hh\\:mm")</div>
+}
+@if (Model.DayBreakSum > TimeSpan.Zero)
+{
+    <div>Break today: @Model.DayBreakSum.ToString("hh\\:mm")</div>
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@using (Html.BeginForm(controllerName: "Home", actionName: "Punch", method: FormMethod.Post))
+{
+    @if (Model.LastEntry?.Kind == PunchBotCore2.Models.Kind.In)
+    {
+        <div><input type="submit" id="punch-out" class="w3-button w3-red punch-button w3-padding-48 w3-block" value="Punch out" /></div>
+    }
+    else
+    {
+        <div><input type="submit" id="punch-in" class="w3-button w3-green punch-button w3-padding-48 w3-block" value="Punch in" /></div>
+    }
+}
+
+<div id="error"></div>
