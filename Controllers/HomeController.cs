@@ -21,13 +21,13 @@ namespace PunchBotCore.Controllers
             var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
             var lastEntry = col.FindOne(Query.All(Query.Descending));
             var now = DateTime.Now;
-            var totalSum = timeUtils.GetAllTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var totalSum = db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var numDays = col.FindAll().GroupBy(x => x.Time.Date).Count();
             var remainingTime = numDays * DailyWorkTime - totalSum;
-            var daySum = timeUtils.GetDailyTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-            var dayBreakSum = timeUtils.GetDailyBreakTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var daySum = db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var dayBreakSum = db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var indexData = new IndexData(
-                weekSum: timeUtils.GetWeeklyTimeSpans(now, db).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
+                weekSum: db.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
                 daySum: daySum,
                 lastEntry: lastEntry,
                 remainingTime: remainingTime,
@@ -58,7 +58,7 @@ namespace PunchBotCore.Controllers
         public ActionResult Week()
         {
             using var db = new LiteDatabase(dbFilename);
-            var week = new Week { TimeSpans = timeUtils.GetWeeklyTimeSpans(DateTime.Now, db) };
+            var week = new Week { TimeSpans = db.GetWeeklyTimeSpans(DateTime.Now) };
             return View(week);
         }
 

@@ -6,39 +6,39 @@ using System.Linq;
 
 namespace PunchBotCore2.Util
 {
-    public class TimeUtils
+    public static class TimeUtils
     {
-        public List<Activity> GetDailyTimeSpans(DateTime time, LiteDatabase db)
+        public static List<Activity> GetDailyTimeSpans(this LiteDatabase db, DateTime time)
         {
             var startOfDay = time.Date;
-            return GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)), db);
+            return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
         }
 
-        public List<Activity> GetDailyBreakTimeSpans(DateTime time, LiteDatabase db)
+        public static List<Activity> GetDailyBreakTimeSpans(this LiteDatabase db, DateTime time)
         {
             var startOfDay = time.Date;
-            return GetBreakTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)), db);
+            return db.GetBreakTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
         }
 
-        public List<Activity> GetWeeklyTimeSpans(DateTime time, LiteDatabase db)
+        public static List<Activity> GetWeeklyTimeSpans(this LiteDatabase db, DateTime time)
         {
             var differenceToMonday = ((int)time.DayOfWeek + 6) % 7;
             var monday = time.AddDays(-differenceToMonday).Date;
-            return GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", monday), Query.LTE("Time", time)), db);
+            return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", monday), Query.LTE("Time", time)));
         }
 
-        public List<Activity> GetMonthlyTimeSpans(DateTime time, LiteDatabase db)
+        public static List<Activity> GetMonthlyTimeSpans(this LiteDatabase db, DateTime time)
         {
             var firstOfMonth = new DateTime(time.Year, time.Month, 1);
-            return GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", firstOfMonth), Query.LTE("Time", time)), db);
+            return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", firstOfMonth), Query.LTE("Time", time)));
         }
 
-        public List<Activity> GetAllTimeSpans(DateTime until, LiteDatabase db)
+        public static List<Activity> GetAllTimeSpans(this LiteDatabase db, DateTime until)
         {
-            return GetWorkTimeSpansForQuery(Query.LTE("Time", until), db);
+            return db.GetWorkTimeSpansForQuery(Query.LTE("Time", until));
         }
 
-        private static List<Activity> GetWorkTimeSpansForQuery(BsonExpression query, LiteDatabase db)
+        private static List<Activity> GetWorkTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
         {
             var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
             col.EnsureIndex(x => x.Time);
@@ -66,7 +66,7 @@ namespace PunchBotCore2.Util
             return timeSpans;
         }
 
-        private static List<Activity> GetBreakTimeSpansForQuery(BsonExpression query, LiteDatabase db)
+        private static List<Activity> GetBreakTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
         {
             var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
             col.EnsureIndex(x => x.Time);
