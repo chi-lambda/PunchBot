@@ -53,6 +53,7 @@ namespace PunchBotCore2.Util
                         lastPunchInTime = punch.Time;
                         break;
                     case Kind.Out:
+                        if (lastPunchInTime == null) { continue; }
                         timeSpans.Add(new Activity { Start = lastPunchInTime.Value, End = punch.Time });
                         lastPunchInTime = null;
                         break;
@@ -80,6 +81,7 @@ namespace PunchBotCore2.Util
                         lastPunchOutTime = punch.Time;
                         break;
                     case Kind.In:
+                        if (lastPunchOutTime == null) { continue; }
                         timeSpans.Add(new Activity { Start = lastPunchOutTime.Value, End = punch.Time });
                         lastPunchOutTime = null;
                         break;
