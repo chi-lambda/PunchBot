@@ -7,7 +7,6 @@ namespace PunchBotCore.Controllers
 {
     public class HomeController : Controller
     {
-        //private String dbFilename = @"d:\home\db\times.db";
         private const string dbFilename = @"times.db";
         private readonly TimeUtils timeUtils = new();
         private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
@@ -64,12 +63,12 @@ namespace PunchBotCore.Controllers
             return View(week);
         }
 
-        public ActionResult Clear()
-        {
-            using var db = new LiteDatabase(dbFilename);
-            db.DropCollection(PunchEntry.TableName);
-            return Redirect("Index");
-        }
+        // public ActionResult Clear()
+        // {
+        //     using var db = new LiteDatabase(dbFilename);
+        //     db.DropCollection(PunchEntry.TableName);
+        //     return Redirect("Index");
+        // }
 
         public ActionResult ListAll()
         {
@@ -98,11 +97,11 @@ namespace PunchBotCore.Controllers
             return RedirectToAction("ListAll");
         }
 
-        public FileResult DownloadDatabase()
-        {
-            var content = System.IO.File.ReadAllBytes(dbFilename);
-            return File(content, "application/octet-stream", "times.db");
-        }
+        // public FileResult DownloadDatabase()
+        // {
+        //     var content = System.IO.File.ReadAllBytes(dbFilename);
+        //     return File(content, "application/octet-stream", "times.db");
+        // }
 
         public IActionResult Error()
         {
