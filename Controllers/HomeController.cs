@@ -9,6 +9,7 @@ namespace PunchBotCore.Controllers
     {
         private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
         private readonly LiteDatabase _db;
+        private readonly TimeSpan minBreakDuration = TimeSpan.FromMinutes(30);
 
         public HomeController(LiteDatabase db)
         {
@@ -30,12 +31,14 @@ namespace PunchBotCore.Controllers
             var remainingTime = numDays * DailyWorkTime - totalSum;
             var daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            var estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
             var indexData = new IndexData(
                 weekSum: _db.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
                 daySum: daySum,
                 lastEntry: lastEntry,
                 remainingTime: remainingTime,
-                dayBreakSum: dayBreakSum
+                dayBreakSum: dayBreakSum,
+                estimatedEnd: estimatedEnd
             );
 
             return indexData;

@@ -1,5 +1,9 @@
 ﻿@model PunchBotCore2.Models.IndexData
 
+@{
+    ViewBag.Title = "";
+}
+
 <div>@Html.ActionLink("Weekly Overview", "Week", routeValues: null, htmlAttributes: new { @class = "w3-button w3-blue" })</div>
 
 @if (Model.DaySum > TimeSpan.Zero)
@@ -8,11 +12,12 @@
 }
 @if (Model.WeekSum > TimeSpan.Zero)
 {
-    <div>Work this week: @Model.WeekSum.ToString("hh\\:mm")</div>
+    <div>Work this week: @Model.WeekSum.TotalHours.ToString("00"):@Model.WeekSum.Minutes.ToString("00")</div>
 }
 @if (Model.DaySum > TimeSpan.Zero)
 {
     <div>Remaining time: @Model.RemainingTimeSign@Model.RemainingTime.ToString("hh\\:mm")</div>
+    <div>Estimated end: @Model.EstimatedEnd.ToString("t")</div>
 }
 @if (Model.DayBreakSum > TimeSpan.Zero)
 {
