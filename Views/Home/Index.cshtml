@@ -12,7 +12,7 @@
 }
 @if (Model.WeekSum > TimeSpan.Zero)
 {
-    <div>Work this week: @Model.WeekSum.TotalHours.ToString("00"):@Model.WeekSum.Minutes.ToString("00")</div>
+    <div>Work this week: @Math.Floor(Model.WeekSum.TotalHours).ToString("00"):@Model.WeekSum.Minutes.ToString("00")</div>
 }
 @if (Model.DaySum > TimeSpan.Zero)
 {
