@@ -3,7 +3,7 @@ using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Util;
 
-namespace PunchBotCore.Controllers
+namespace PunchBotCore2.Controllers
 {
     public class HomeController : Controller
     {
