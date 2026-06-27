@@ -11,5 +11,10 @@ namespace PunchBotCore2.Models
         public int Id { get; set; }
         public DateTime Time { get; set; }
         public Kind Kind { get; set; }
+
+        public string ToSqlRow()
+        {
+            return $"    ('{Time:u}','{Kind}')";
+        }
     }
 }

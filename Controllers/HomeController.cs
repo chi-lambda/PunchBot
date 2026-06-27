@@ -114,6 +114,22 @@ namespace PunchBotCore2.Controllers
         //     return File(content, "application/octet-stream", "times.db");
         // }
 
+        public ContentResult Export()
+        {
+            const string header = "insert into\n    punch_entries(id, time, kind)\nvalues\n";
+            var result = _db.GetCollection<PunchEntry>(PunchEntry.TableName)
+                .FindAll()
+                .OrderBy(x => x.Time)
+                .Select(x => x.ToSqlRow());
+
+            return new ContentResult
+            {
+                Content = header + string.Join(",\n", result) + ";",
+                ContentType = "application/sql",
+                StatusCode = 200
+            };
+        }
+
         public IActionResult Error()
         {
             return base.View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
