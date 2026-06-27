@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace PunchBotCore2.Models
+﻿namespace PunchBotCore2.Models
 {
     public class Week
     {

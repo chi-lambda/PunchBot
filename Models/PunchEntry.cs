@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PunchBotCore2.Models
+﻿namespace PunchBotCore2.Models
 {
     public enum Kind { In, Out }
 
@@ -15,6 +13,11 @@ namespace PunchBotCore2.Models
         public string ToSqlRow()
         {
             return $"    ('{Time:u}','{Kind}')";
+        }
+
+        public override string ToString()
+        {
+            return $"Id\t{Time}\t{Kind}";
         }
     }
 }

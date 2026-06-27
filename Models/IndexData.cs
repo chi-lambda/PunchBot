@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PunchBotCore2.Models
+﻿namespace PunchBotCore2.Models
 {
     public class IndexData
     {
