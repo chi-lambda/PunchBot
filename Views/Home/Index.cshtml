@@ -6,19 +6,12 @@
 
 <div>@Html.ActionLink("Weekly Overview", "Week", routeValues: null, htmlAttributes: new { @class = "w3-button w3-blue" })</div>
 
-@if (Model.DaySum > TimeSpan.Zero)
-{
-    <div>Work today: @Model.DaySum.ToString("hh\\:mm")</div>
-}
-@if (Model.WeekSum > TimeSpan.Zero)
-{
-    <div>Work this week: @Math.Floor(Model.WeekSum.TotalHours).ToString("00"):@Model.WeekSum.Minutes.ToString("00")</div>
-}
-@if (Model.DaySum > TimeSpan.Zero)
-{
-    <div>Remaining time: @Model.RemainingTimeSign@Model.RemainingTime.ToString("hh\\:mm")</div>
-    <div>Estimated end: @Model.EstimatedEnd.ToString("t")</div>
-}
+<div>Work today: @Model.DaySum.ToString("hh\\:mm")</div>
+<div>Work this week: @Math.Floor(Model.WeekSum.TotalHours).ToString("00"):@Model.WeekSum.Minutes.ToString("00")</div>
+
+<div>Remaining time: @Model.RemainingTimeSign@Model.RemainingTime.ToString("hh\\:mm")</div>
+<div>Estimated end: @Model.EstimatedEnd.ToString("HH\\:mm")</div>
+
 @if (Model.DayBreakSum > TimeSpan.Zero)
 {
     <div>Break today: @Model.DayBreakSum.ToString("hh\\:mm")</div>

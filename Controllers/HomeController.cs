@@ -27,8 +27,13 @@ namespace PunchBotCore2.Controllers
             var lastEntry = col.FindOne(Query.All(Query.Descending));
             var now = DateTime.Now;
             var totalSum = _db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+
             var numDays = col.FindAll().GroupBy(x => x.Time.Date).Count();
             var remainingTime = numDays * DailyWorkTime - totalSum;
+            if (remainingTime <= TimeSpan.Zero)
+            {
+                remainingTime = DailyWorkTime;
+            }
             var daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             var estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
