@@ -27,7 +27,7 @@ namespace PunchBotCore2.Controllers
             TimeSpan remainingTime = numDays * DailyWorkTime - totalSum;
             if (remainingTime <= TimeSpan.Zero)
             {
-                remainingTime = DailyWorkTime;
+                remainingTime = DailyWorkTime + remainingTime;
             }
             TimeSpan daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
             TimeSpan dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
