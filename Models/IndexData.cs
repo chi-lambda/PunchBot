@@ -1,23 +1,13 @@
 ﻿namespace PunchBotCore2.Models
 {
-    public class IndexData
+    public class IndexData(PunchEntry lastEntry, TimeSpan weekSum, TimeSpan daySum, TimeSpan remainingTime, TimeSpan dayBreakSum, DateTime estimatedEnd)
     {
-        public PunchEntry LastEntry { get; }
-        public TimeSpan WeekSum { get; }
-        public TimeSpan DaySum { get; }
-        public TimeSpan RemainingTime { get; }
+        public PunchEntry LastEntry { get; } = lastEntry;
+        public TimeSpan WeekSum { get; } = weekSum;
+        public TimeSpan DaySum { get; } = daySum;
+        public TimeSpan RemainingTime { get; } = remainingTime;
         public string RemainingTimeSign => RemainingTime.Ticks < 0 ? "-" : "";
-        public TimeSpan DayBreakSum { get; }
-        public DateTime EstimatedEnd{ get; }
-
-        public IndexData(PunchEntry lastEntry, TimeSpan weekSum, TimeSpan daySum, TimeSpan remainingTime, TimeSpan dayBreakSum, DateTime estimatedEnd)
-        {
-            LastEntry = lastEntry;
-            WeekSum = weekSum;
-            DaySum = daySum;
-            RemainingTime = remainingTime;
-            DayBreakSum = dayBreakSum;
-            EstimatedEnd = estimatedEnd;
-        }
+        public TimeSpan DayBreakSum { get; } = dayBreakSum;
+        public DateTime EstimatedEnd { get; } = estimatedEnd;
     }
 }

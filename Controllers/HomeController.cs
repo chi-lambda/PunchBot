@@ -5,16 +5,11 @@ using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController(LiteDatabase db) : Controller
     {
         private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
-        private readonly LiteDatabase _db;
+        private readonly LiteDatabase _db = db;
         private readonly TimeSpan minBreakDuration = TimeSpan.FromMinutes(30);
-
-        public HomeController(LiteDatabase db)
-        {
-            _db = db;
-        }
 
         public ActionResult Index()
         {

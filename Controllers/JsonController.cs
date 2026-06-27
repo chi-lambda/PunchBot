@@ -5,14 +5,9 @@ using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Controllers
 {
-    public class JsonController : Controller
+    public class JsonController(LiteDatabase db) : Controller
     {
-        private readonly LiteDatabase _db;
-
-        public JsonController(LiteDatabase db)
-        {
-            _db = db;
-        }
+        private readonly LiteDatabase _db = db;
 
         public JsonResult Week()
         {
