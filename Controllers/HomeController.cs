@@ -18,21 +18,21 @@ namespace PunchBotCore2.Controllers
 
         private IndexData GetIndexData()
         {
-            var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
-            var lastEntry = col.FindOne(Query.All(Query.Descending));
-            var now = DateTime.Now;
-            var totalSum = _db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            ILiteCollection<PunchEntry> col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            PunchEntry lastEntry = col.FindOne(Query.All(Query.Descending));
+            DateTime now = DateTime.Now;
+            TimeSpan totalSum = _db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
 
             var numDays = col.FindAll().GroupBy(x => x.Time.Date).Count();
-            var remainingTime = numDays * DailyWorkTime - totalSum;
+            TimeSpan remainingTime = numDays * DailyWorkTime - totalSum;
             if (remainingTime <= TimeSpan.Zero)
             {
                 remainingTime = DailyWorkTime;
             }
-            var daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-            var dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-            var estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
-            var indexData = new IndexData(
+            TimeSpan daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            TimeSpan dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+            DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
+            IndexData indexData = new(
                 weekSum: _db.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
                 daySum: daySum,
                 lastEntry: lastEntry,
@@ -47,12 +47,12 @@ namespace PunchBotCore2.Controllers
         [HttpPost]
         public ActionResult Punch()
         {
-            var now = DateTime.Now;
+            DateTime now = DateTime.Now;
 
-            var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            ILiteCollection<PunchEntry> col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
 
-            var lastEntry = col.FindOne(Query.All(Query.Descending));
-            var lastKind = lastEntry?.Kind ?? Kind.Out;
+            PunchEntry lastEntry = col.FindOne(Query.All(Query.Descending));
+            Kind lastKind = lastEntry?.Kind ?? Kind.Out;
 
             col.Insert(new PunchEntry { Kind = lastKind == Kind.In ? Kind.Out : Kind.In, Time = now });
             return RedirectToAction("Index");
@@ -61,11 +61,11 @@ namespace PunchBotCore2.Controllers
         [HttpPost]
         public ActionResult Holiday()
         {
-            var today = DateTime.Today;
-            var startTime = today.AddHours(8);
-            var endTime = startTime + DailyWorkTime;
+            DateTime today = DateTime.Today;
+            DateTime startTime = today.AddHours(8);
+            DateTime endTime = startTime + DailyWorkTime;
 
-            var col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            ILiteCollection<PunchEntry> col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
 
             col.Insert(new PunchEntry { Kind = Kind.In, Time = startTime });
             col.Insert(new PunchEntry { Kind = Kind.Out, Time = endTime });
@@ -74,7 +74,7 @@ namespace PunchBotCore2.Controllers
 
         public ActionResult Week()
         {
-            var week = new Week { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
+            Week week = new() { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
             return View(week);
         }
 
@@ -117,7 +117,7 @@ namespace PunchBotCore2.Controllers
         public ContentResult Export()
         {
             const string header = "insert into\n    punch_entries(id, time, kind)\nvalues\n";
-            var result = _db.GetCollection<PunchEntry>(PunchEntry.TableName)
+            IEnumerable<string> result = _db.GetCollection<PunchEntry>(PunchEntry.TableName)
                 .FindAll()
                 .OrderBy(x => x.Time)
                 .Select(x => x.ToSqlRow());

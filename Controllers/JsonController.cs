@@ -11,13 +11,17 @@ namespace PunchBotCore2.Controllers
 
         public JsonResult Week()
         {
-            var week = new Week { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
+            Week week = new() { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
             return new JsonResult(week);
         }
 
         public JsonResult ListAll()
         {
-            var result = _db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll().OrderByDescending(x => x.Time).ToList();
+            List<PunchEntry> result = _db.GetCollection<PunchEntry>(PunchEntry.TableName)
+                .FindAll()
+                .OrderByDescending(x => x.Time)
+                .ToList();
+
             return new JsonResult(result);
         }
 

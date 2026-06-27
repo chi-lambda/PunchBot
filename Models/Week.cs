@@ -2,7 +2,7 @@
 {
     public class Week
     {
-        public List<Activity> TimeSpans { get; set; } = new List<Activity>();
+        public List<Activity> TimeSpans { get; set; } = [];
         public TimeSpan Sum => TimeSpans.Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
     }
 }

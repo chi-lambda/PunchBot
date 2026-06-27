@@ -7,26 +7,26 @@ namespace PunchBotCore2.Util
     {
         public static List<Activity> GetDailyTimeSpans(this LiteDatabase db, DateTime time)
         {
-            var startOfDay = time.Date;
+            DateTime startOfDay = time.Date;
             return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
         }
 
         public static List<Activity> GetDailyBreakTimeSpans(this LiteDatabase db, DateTime time)
         {
-            var startOfDay = time.Date;
+            DateTime startOfDay = time.Date;
             return db.GetBreakTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
         }
 
         public static List<Activity> GetWeeklyTimeSpans(this LiteDatabase db, DateTime time)
         {
             var differenceToMonday = ((int)time.DayOfWeek + 6) % 7;
-            var monday = time.AddDays(-differenceToMonday).Date;
+            DateTime monday = time.AddDays(-differenceToMonday).Date;
             return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", monday), Query.LTE("Time", time)));
         }
 
         public static List<Activity> GetMonthlyTimeSpans(this LiteDatabase db, DateTime time)
         {
-            var firstOfMonth = new DateTime(time.Year, time.Month, 1);
+            DateTime firstOfMonth = new(time.Year, time.Month, 1);
             return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", firstOfMonth), Query.LTE("Time", time)));
         }
 
@@ -37,12 +37,12 @@ namespace PunchBotCore2.Util
 
         private static List<Activity> GetWorkTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
         {
-            var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
             col.EnsureIndex(x => x.Time);
-            var entries = col.Find(query);
+            IEnumerable<PunchEntry> entries = col.Find(query);
             DateTime? lastPunchInTime = null;
-            var timeSpans = new List<Activity>();
-            foreach (var punch in entries)
+            List<Activity> timeSpans = [];
+            foreach (PunchEntry punch in entries)
             {
                 switch (punch.Kind)
                 {
@@ -65,12 +65,12 @@ namespace PunchBotCore2.Util
 
         private static List<Activity> GetBreakTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
         {
-            var col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+            ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
             col.EnsureIndex(x => x.Time);
-            var entries = col.Find(query).Skip(1);
+            IEnumerable<PunchEntry> entries = col.Find(query).Skip(1);
             DateTime? lastPunchOutTime = null;
-            var timeSpans = new List<Activity>();
-            foreach (var punch in entries)
+            List<Activity> timeSpans = [];
+            foreach (PunchEntry punch in entries)
             {
                 switch (punch.Kind)
                 {
