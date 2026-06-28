@@ -3,6 +3,7 @@ using PunchBotCore2.Controllers;
 using PunchBotCore2.Data;
 using PunchBotCore2.Models;
 using PunchBotCore2.Tests.Mocks;
+using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Tests;
 
@@ -14,7 +15,8 @@ public sealed class HomeControllerTest
     [TestMethod]
     public async Task Index_WorksWithInitialDatabase()
     {
-        HomeController controller = new(new TestPunchContextFactory());
+        IDateTimeService dateTimeService = new DateTimeService();
+        HomeController controller = new(new TestPunchContextFactory(dateTimeService), dateTimeService);
         ActionResult result = await controller.Index();
         Assert.IsInstanceOfType<ViewResult>(result);
         ViewResult viewResult = (ViewResult)result;
@@ -30,8 +32,9 @@ public sealed class HomeControllerTest
     [TestMethod]
     public async Task Index_TwoPunchesAdded()
     {
-        TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory);
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10), DateTime.Today.AddHours(12)]);
+        TestPunchContextFactory contextFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -45,6 +48,7 @@ public sealed class HomeControllerTest
         IndexData model = (IndexData)viewResult.Model;
         Assert.AreEqual(TimeSpan.FromHours(2), model.DaySum);
         Assert.AreEqual(TimeSpan.FromHours(2), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DayBreakSum);
         Assert.AreEqual(new(2, DateTime.Today.AddHours(10), Kind.Out), model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
     }
