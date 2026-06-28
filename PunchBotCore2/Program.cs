@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Data;
+using PunchBotCore2.Util;
 
 namespace PunchBotCore2;
 
@@ -13,6 +14,7 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddControllersWithViews();
+        builder.Services.AddSingleton<IDateTimeService>(new DateTimeService());
         builder.Services.AddSingleton(new LiteDB.LiteDatabase(dbFilename));
         builder.Services.AddDbContextFactory<PunchContext>(
             options => options.UseSqlite(builder.Configuration.GetConnectionString("PunchContextSQLite")));

@@ -23,7 +23,7 @@
                 <tr>
                     <td>@entry.Start.DayOfWeek</td>
                     <td>@entry.Start.ToString("yyyy-MM-dd HH:mm")</td>
-                    <td>@(entry.End?.ToString("yyyy-MM-dd HH:mm") ?? "")</td>
+                    <td>@entry.End.ToString("yyyy-MM-dd HH:mm")</td>
                     <td>@entry.Duration.ToString(@"hh\:mm")</td>
                 </tr>
             }

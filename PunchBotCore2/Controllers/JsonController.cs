@@ -3,15 +3,16 @@ using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Data;
 using Microsoft.EntityFrameworkCore;
+using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Controllers;
 
-public class JsonController(IDbContextFactory<PunchContext> contextFactory) : Controller
+public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDateTimeService dateTimeService) : Controller
 {
     public async Task<JsonResult> Week()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(DateTime.Now) };
+        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(dateTimeService.Now) };
         return new JsonResult(week);
     }
 

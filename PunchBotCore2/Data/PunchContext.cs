@@ -1,10 +1,11 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Models;
+using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Data;
 
-public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(options)
+public class PunchContext(DbContextOptions<PunchContext> options, IDateTimeService dateTimeService) : DbContext(options)
 {
     public DbSet<PunchEntry> PunchEntries { get; set; }
 
@@ -56,14 +57,14 @@ public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(op
                     break;
                 case Kind.Out:
                     if (lastPunchInTime == null) { continue; }
-                    timeSpans.Add(new Activity { Start = lastPunchInTime.Value, End = punch.Time });
+                    timeSpans.Add(new Activity(lastPunchInTime.Value, punch.Time));
                     lastPunchInTime = null;
                     break;
             }
         }
         if (lastPunchInTime != null)
         {
-            timeSpans.Add(new Activity { Start = lastPunchInTime.Value });
+            timeSpans.Add(new Activity(lastPunchInTime.Value, default));
         }
         return timeSpans;
     }
@@ -82,14 +83,14 @@ public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(op
                     break;
                 case Kind.In:
                     if (lastPunchOutTime == null) { continue; }
-                    timeSpans.Add(new Activity { Start = lastPunchOutTime.Value, End = punch.Time });
+                    timeSpans.Add(new Activity(lastPunchOutTime.Value, punch.Time));
                     lastPunchOutTime = null;
                     break;
             }
         }
         if (lastPunchOutTime != null)
         {
-            timeSpans.Add(new Activity { Start = lastPunchOutTime.Value });
+            timeSpans.Add(new Activity(lastPunchOutTime.Value, dateTimeService.Now));
         }
         return timeSpans;
     }

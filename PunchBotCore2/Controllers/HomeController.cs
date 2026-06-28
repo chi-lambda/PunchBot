@@ -3,10 +3,11 @@ using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Data;
 using Microsoft.EntityFrameworkCore;
+using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Controllers;
 
-public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Controller
+public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDateTimeService dateTimeService) : Controller
 {
     private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
     private readonly TimeSpan minBreakDuration = TimeSpan.FromMinutes(30);
@@ -21,7 +22,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
         using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
         PunchEntry? lastEntry = await punchEntries.OrderByDescending(e => e.Time).FirstOrDefaultAsync();
-        DateTime now = DateTime.Now;
+        DateTime now = dateTimeService.Now;
         TimeSpan totalSum = context.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
 
         var numDays = punchEntries.GroupBy(x => x.Time.Date).Count();
@@ -32,7 +33,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
         }
         TimeSpan daySum = context.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
         TimeSpan dayBreakSum = context.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-        DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
+        DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? now + remainingTime : now + remainingTime + minBreakDuration - dayBreakSum;
         IndexData indexData = new(
             WeekSum: context.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
             DaySum: daySum,
@@ -48,7 +49,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
     [HttpPost]
     public async Task<ActionResult> Punch()
     {
-        DateTime now = DateTime.Now;
+        DateTime now = dateTimeService.Now;
 
         using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
@@ -80,7 +81,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
     public async Task<ActionResult> Week()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(DateTime.Now) };
+        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(dateTimeService.Now) };
         return View(week);
     }
 
