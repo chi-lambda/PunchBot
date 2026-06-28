@@ -1,16 +1,23 @@
+using Microsoft.EntityFrameworkCore;
+using PunchBotCore2.Data;
+using PunchBotCore2.Util;
+
 namespace PunchBotCore;
 
 public class Program
 {
     private const string dbFilename = "times.db";
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
         builder.Services.AddControllersWithViews();
         builder.Services.AddSingleton(new LiteDB.LiteDatabase(dbFilename));
+        builder.Services.AddDbContext<PunchContext>(
+            options => options.UseSqlite(builder.Configuration.GetConnectionString("PunchContextSQLite")));
+        builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
         WebApplication app = builder.Build();
 
@@ -20,6 +27,20 @@ public class Program
             app.UseExceptionHandler("/Home/Error");
             // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
             app.UseHsts();
+        }
+        else
+        {
+            app.UseDeveloperExceptionPage();
+            app.UseMigrationsEndPoint();
+        }
+        
+        using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
+        {
+            IServiceProvider services = scope.ServiceProvider;
+            PunchContext context = services.GetRequiredService<PunchContext>();
+            context.Database.EnsureCreated();
+            LiteDB.LiteDatabase liteDB = services.GetRequiredService<LiteDB.LiteDatabase>();
+            await liteDB.Migrate(context);
         }
 
         // app.UseHttpsRedirection();

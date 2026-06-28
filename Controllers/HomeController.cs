@@ -2,14 +2,16 @@
 using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Util;
+using PunchBotCore2.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace PunchBotCore2.Controllers;
 
-public class HomeController(LiteDatabase db) : Controller
+public class HomeController(PunchContext context) : Controller
 {
     private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
-    private readonly LiteDatabase _db = db;
     private readonly TimeSpan minBreakDuration = TimeSpan.FromMinutes(30);
+    private IQueryable<PunchEntry> PunchEntries { get; } = context.PunchEntries;
 
     public ActionResult Index()
     {
@@ -18,22 +20,22 @@ public class HomeController(LiteDatabase db) : Controller
 
     private IndexData GetIndexData()
     {
-        ILiteCollection<PunchEntry> col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
-        PunchEntry lastEntry = col.FindOne(Query.All(Query.Descending));
+        DbSet<PunchEntry> punchEntries = context.PunchEntries;
+        PunchEntry lastEntry = punchEntries.OrderByDescending(e => e.Time).First();
         DateTime now = DateTime.Now;
-        TimeSpan totalSum = _db.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        TimeSpan totalSum = context.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
 
-        var numDays = col.FindAll().GroupBy(x => x.Time.Date).Count();
+        var numDays = punchEntries.GroupBy(x => x.Time.Date).Count();
         TimeSpan remainingTime = numDays * DailyWorkTime - totalSum;
         if (remainingTime <= TimeSpan.Zero)
         {
             remainingTime = DailyWorkTime + remainingTime;
         }
-        TimeSpan daySum = _db.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-        TimeSpan dayBreakSum = _db.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        TimeSpan daySum = context.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        TimeSpan dayBreakSum = context.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
         DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
         IndexData indexData = new(
-            weekSum: _db.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
+            weekSum: context.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
             daySum: daySum,
             lastEntry: lastEntry,
             remainingTime: remainingTime,
@@ -45,36 +47,38 @@ public class HomeController(LiteDatabase db) : Controller
     }
 
     [HttpPost]
-    public ActionResult Punch()
+    public async Task<ActionResult> Punch()
     {
         DateTime now = DateTime.Now;
 
-        ILiteCollection<PunchEntry> col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
+        DbSet<PunchEntry> punchEntries = context.PunchEntries;
 
-        PunchEntry lastEntry = col.FindOne(Query.All(Query.Descending));
+        PunchEntry lastEntry = punchEntries.OrderByDescending(e => e.Time).First();
         Kind lastKind = lastEntry?.Kind ?? Kind.Out;
 
-        col.Insert(new PunchEntry { Kind = lastKind == Kind.In ? Kind.Out : Kind.In, Time = now });
+        await punchEntries.AddAsync(new PunchEntry { Kind = lastKind == Kind.In ? Kind.Out : Kind.In, Time = now });
+        await context.SaveChangesAsync();
         return RedirectToAction("Index");
     }
 
     [HttpPost]
-    public ActionResult Holiday()
+    public async Task<ActionResult> Holiday()
     {
         DateTime today = DateTime.Today;
         DateTime startTime = today.AddHours(8);
         DateTime endTime = startTime + DailyWorkTime;
 
-        ILiteCollection<PunchEntry> col = _db.GetCollection<PunchEntry>(PunchEntry.TableName);
+        DbSet<PunchEntry> punchEntries = context.PunchEntries;
 
-        col.Insert(new PunchEntry { Kind = Kind.In, Time = startTime });
-        col.Insert(new PunchEntry { Kind = Kind.Out, Time = endTime });
+        punchEntries.Add(new PunchEntry { Kind = Kind.In, Time = startTime });
+        punchEntries.Add(new PunchEntry { Kind = Kind.Out, Time = endTime });
+        await context.SaveChangesAsync();
         return RedirectToAction("Index");
     }
 
     public ActionResult Week()
     {
-        Week week = new() { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
+        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(DateTime.Now) };
         return View(week);
     }
 
@@ -87,24 +91,30 @@ public class HomeController(LiteDatabase db) : Controller
 
     public ActionResult ListAll()
     {
-        return View(_db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll().OrderByDescending(x => x.Time).ToList());
+        return View(context.PunchEntries.OrderByDescending(x => x.Time).ToList());
     }
 
     public ActionResult Edit(int id)
     {
-        return View(_db.GetCollection<PunchEntry>(PunchEntry.TableName).FindById(id));
+        return View(context.PunchEntries.Find(id));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public ActionResult Edit(PunchEntry entry)
     {
-        _db.GetCollection<PunchEntry>(PunchEntry.TableName).Update(entry);
+        context.PunchEntries.Update(entry);
         return RedirectToAction("ListAll");
     }
 
-    public ActionResult Delete(int id)
+    public async Task<ActionResult> Delete(int id)
     {
-        _db.GetCollection<PunchEntry>(PunchEntry.TableName).Delete(id);
+        PunchEntry? entryToDelete = context.PunchEntries.Find(id);
+        Console.WriteLine("Found {0}", entryToDelete);
+        if (entryToDelete is not null)
+        {
+            context.PunchEntries.Remove(entryToDelete);
+            await context.SaveChangesAsync();
+        }
         return RedirectToAction("ListAll");
     }
 
@@ -117,8 +127,7 @@ public class HomeController(LiteDatabase db) : Controller
     public ContentResult Export()
     {
         const string header = "insert into\n    punch_entries(id, time, kind)\nvalues\n";
-        IEnumerable<string> result = _db.GetCollection<PunchEntry>(PunchEntry.TableName)
-            .FindAll()
+        IEnumerable<string> result = context.PunchEntries
             .OrderBy(x => x.Time)
             .Select(x => x.ToSqlRow());
 

@@ -1,45 +1,46 @@
-﻿using LiteDB;
+﻿using System.Linq.Expressions;
+using LiteDB;
+using Microsoft.EntityFrameworkCore;
+using PunchBotCore2.Data;
 using PunchBotCore2.Models;
 
 namespace PunchBotCore2.Util;
 
 public static class TimeUtils
 {
-    public static List<Activity> GetDailyTimeSpans(this LiteDatabase db, DateTime time)
+    public static List<Activity> GetDailyTimeSpans(this PunchContext context, DateTime time)
     {
         DateTime startOfDay = time.Date;
-        return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
+        return context.GetWorkTimeSpansForQuery(e => e.Time >= startOfDay && e.Time <= time);
     }
 
-    public static List<Activity> GetDailyBreakTimeSpans(this LiteDatabase db, DateTime time)
+    public static List<Activity> GetDailyBreakTimeSpans(this PunchContext context, DateTime time)
     {
         DateTime startOfDay = time.Date;
-        return db.GetBreakTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
+        return context.GetBreakTimeSpansForQuery(e => e.Time >= startOfDay && e.Time <= time);
     }
 
-    public static List<Activity> GetWeeklyTimeSpans(this LiteDatabase db, DateTime time)
+    public static List<Activity> GetWeeklyTimeSpans(this PunchContext context, DateTime time)
     {
         var differenceToMonday = ((int)time.DayOfWeek + 6) % 7;
         DateTime monday = time.AddDays(-differenceToMonday).Date;
-        return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", monday), Query.LTE("Time", time)));
+        return context.GetWorkTimeSpansForQuery(e => e.Time >= monday && e.Time <= time);
     }
 
-    public static List<Activity> GetMonthlyTimeSpans(this LiteDatabase db, DateTime time)
+    public static List<Activity> GetMonthlyTimeSpans(this PunchContext context, DateTime time)
     {
         DateTime firstOfMonth = new(time.Year, time.Month, 1);
-        return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", firstOfMonth), Query.LTE("Time", time)));
+        return context.GetWorkTimeSpansForQuery(e => e.Time >= firstOfMonth && e.Time<=time);
     }
 
-    public static List<Activity> GetAllTimeSpans(this LiteDatabase db, DateTime until)
+    public static List<Activity> GetAllTimeSpans(this PunchContext context, DateTime until)
     {
-        return db.GetWorkTimeSpansForQuery(Query.LTE("Time", until));
+        return context.GetWorkTimeSpansForQuery(e => e.Time <= until);
     }
 
-    private static List<Activity> GetWorkTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
+    private static List<Activity> GetWorkTimeSpansForQuery(this PunchContext context, Expression<Func<PunchEntry, bool>> query)
     {
-        ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
-        col.EnsureIndex(x => x.Time);
-        IEnumerable<PunchEntry> entries = col.Find(query);
+        IQueryable<PunchEntry> entries = context.PunchEntries.Where(query).OrderBy(e => e.Time);
         DateTime? lastPunchInTime = null;
         List<Activity> timeSpans = [];
         foreach (PunchEntry punch in entries)
@@ -63,11 +64,9 @@ public static class TimeUtils
         return timeSpans;
     }
 
-    private static List<Activity> GetBreakTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
+    private static List<Activity> GetBreakTimeSpansForQuery(this PunchContext context, Expression<Func<PunchEntry, bool>> query)
     {
-        ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
-        col.EnsureIndex(x => x.Time);
-        IEnumerable<PunchEntry> entries = col.Find(query).Skip(1);
+        IQueryable<PunchEntry> entries = context.PunchEntries.Where(query).OrderBy(e => e.Time).Skip(1);
         DateTime? lastPunchOutTime = null;
         List<Activity> timeSpans = [];
         foreach (PunchEntry punch in entries)
@@ -89,6 +88,21 @@ public static class TimeUtils
             timeSpans.Add(new Activity { Start = lastPunchOutTime.Value });
         }
         return timeSpans;
+    }
+
+    public static async Task Migrate(this LiteDatabase db, PunchContext context)
+    {
+        if (await context.PunchEntries.AnyAsync())
+        {
+            return; // already migrated
+        }
+
+        Console.WriteLine("Migrating DB");
+
+        IEnumerable<PunchEntry> punchEntries = db.GetCollection<PunchEntry>(PunchEntry.TableName).FindAll();
+        Console.WriteLine($"Migrating {punchEntries.Count()} entries");
+        await context.PunchEntries.AddRangeAsync(punchEntries);
+        await context.SaveChangesAsync();
     }
 }
 

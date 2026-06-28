@@ -2,23 +2,21 @@ using Microsoft.AspNetCore.Mvc;
 using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Util;
+using PunchBotCore2.Data;
 
 namespace PunchBotCore2.Controllers;
 
-public class JsonController(LiteDatabase db) : Controller
+public class JsonController(PunchContext context) : Controller
 {
-    private readonly LiteDatabase _db = db;
-
     public JsonResult Week()
     {
-        Week week = new() { TimeSpans = _db.GetWeeklyTimeSpans(DateTime.Now) };
+        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(DateTime.Now) };
         return new JsonResult(week);
     }
 
     public JsonResult ListAll()
     {
-        List<PunchEntry> result = _db.GetCollection<PunchEntry>(PunchEntry.TableName)
-            .FindAll()
+        List<PunchEntry> result = context.PunchEntries
             .OrderByDescending(x => x.Time)
             .ToList();
 
@@ -27,19 +25,26 @@ public class JsonController(LiteDatabase db) : Controller
 
     public JsonResult Get(int id)
     {
-        return new JsonResult(_db.GetCollection<PunchEntry>(PunchEntry.TableName).FindById(id));
+        return new JsonResult(context.PunchEntries.Find(id));
     }
 
     [HttpPatch]
-    public ActionResult Patch(PunchEntry entry)
+    public async Task<ActionResult> Patch(PunchEntry entry)
     {
-        _db.GetCollection<PunchEntry>(PunchEntry.TableName).Update(entry);
+        context.PunchEntries.Update(entry);
+        await context.SaveChangesAsync();
         return Ok();
     }
 
-    public ActionResult Delete(int id)
+    public async Task<ActionResult> Delete(int id)
     {
-        _db.GetCollection<PunchEntry>(PunchEntry.TableName).Delete(id);
+        PunchEntry? entryToDelete = context.PunchEntries.Find(id);
+        if (entryToDelete is not null)
+        {
+            context.PunchEntries.Remove(entryToDelete);
+            await context.SaveChangesAsync();
+        }
+
         return NoContent();
     }
 }
