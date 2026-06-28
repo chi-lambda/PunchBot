@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Data;
-using PunchBotCore2.Util;
 
 namespace PunchBotCore;
 
@@ -40,7 +39,7 @@ public class Program
             PunchContext context = services.GetRequiredService<PunchContext>();
             context.Database.EnsureCreated();
             LiteDB.LiteDatabase liteDB = services.GetRequiredService<LiteDB.LiteDatabase>();
-            await liteDB.Migrate(context);
+            await context.Migrate(liteDB);
         }
 
         // app.UseHttpsRedirection();
