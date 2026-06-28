@@ -2,13 +2,9 @@
 
 public enum Kind { In, Out }
 
-public class PunchEntry
+public record PunchEntry(int Id, DateTime Time, Kind Kind)
 {
     public const string TableName = "punch";
-
-    public int Id { get; set; }
-    public DateTime Time { get; set; }
-    public Kind Kind { get; set; }
 
     public string ToSqlRow()
     {

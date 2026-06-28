@@ -20,7 +20,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
-        PunchEntry lastEntry = punchEntries.OrderByDescending(e => e.Time).First();
+        PunchEntry? lastEntry = await punchEntries.OrderByDescending(e => e.Time).FirstOrDefaultAsync();
         DateTime now = DateTime.Now;
         TimeSpan totalSum = context.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
 
@@ -34,12 +34,12 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
         TimeSpan dayBreakSum = context.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
         DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? DateTime.Now + remainingTime : DateTime.Now + remainingTime + minBreakDuration - dayBreakSum;
         IndexData indexData = new(
-            weekSum: context.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
-            daySum: daySum,
-            lastEntry: lastEntry,
-            remainingTime: remainingTime,
-            dayBreakSum: dayBreakSum,
-            estimatedEnd: estimatedEnd
+            WeekSum: context.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
+            DaySum: daySum,
+            LastEntry: lastEntry,
+            RemainingTime: remainingTime,
+            DayBreakSum: dayBreakSum,
+            EstimatedEnd: estimatedEnd
         );
 
         return indexData;
@@ -53,10 +53,10 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
         using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
 
-        PunchEntry lastEntry = punchEntries.OrderByDescending(e => e.Time).First();
+        PunchEntry? lastEntry = await punchEntries.OrderByDescending(e => e.Time).FirstOrDefaultAsync();
         Kind lastKind = lastEntry?.Kind ?? Kind.Out;
 
-        await punchEntries.AddAsync(new PunchEntry { Kind = lastKind == Kind.In ? Kind.Out : Kind.In, Time = now });
+        await punchEntries.AddAsync(new PunchEntry(default, now, lastKind == Kind.In ? Kind.Out : Kind.In));
         await context.SaveChangesAsync();
         return RedirectToAction("Index");
     }
@@ -71,8 +71,8 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Co
         using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
 
-        punchEntries.Add(new PunchEntry { Kind = Kind.In, Time = startTime });
-        punchEntries.Add(new PunchEntry { Kind = Kind.Out, Time = endTime });
+        punchEntries.Add(new PunchEntry(default, startTime, Kind.In));
+        punchEntries.Add(new PunchEntry(default, endTime, Kind.Out));
         await context.SaveChangesAsync();
         return RedirectToAction("Index");
     }
