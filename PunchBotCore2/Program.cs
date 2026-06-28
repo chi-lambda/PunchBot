@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Data;
 
-namespace PunchBotCore;
+namespace PunchBotCore2;
 
 public class Program
 {
