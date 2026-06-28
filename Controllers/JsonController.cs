@@ -2,19 +2,22 @@ using Microsoft.AspNetCore.Mvc;
 using PunchBotCore2.Models;
 using LiteDB;
 using PunchBotCore2.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace PunchBotCore2.Controllers;
 
-public class JsonController(PunchContext context) : Controller
+public class JsonController(IDbContextFactory<PunchContext> contextFactory) : Controller
 {
-    public JsonResult Week()
+    public async Task<JsonResult> Week()
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(DateTime.Now) };
         return new JsonResult(week);
     }
 
-    public JsonResult ListAll()
+    public async Task<JsonResult> ListAll()
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         List<PunchEntry> result = context.PunchEntries
             .OrderByDescending(x => x.Time)
             .ToList();
@@ -22,14 +25,16 @@ public class JsonController(PunchContext context) : Controller
         return new JsonResult(result);
     }
 
-    public JsonResult Get(int id)
+    public async Task<JsonResult> Get(int id)
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         return new JsonResult(context.PunchEntries.Find(id));
     }
 
     [HttpPatch]
     public async Task<ActionResult> Patch(PunchEntry entry)
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         context.PunchEntries.Update(entry);
         await context.SaveChangesAsync();
         return Ok();
@@ -37,6 +42,7 @@ public class JsonController(PunchContext context) : Controller
 
     public async Task<ActionResult> Delete(int id)
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         PunchEntry? entryToDelete = context.PunchEntries.Find(id);
         if (entryToDelete is not null)
         {

@@ -14,7 +14,7 @@ public class Program
         // Add services to the container.
         builder.Services.AddControllersWithViews();
         builder.Services.AddSingleton(new LiteDB.LiteDatabase(dbFilename));
-        builder.Services.AddDbContext<PunchContext>(
+        builder.Services.AddDbContextFactory<PunchContext>(
             options => options.UseSqlite(builder.Configuration.GetConnectionString("PunchContextSQLite")));
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

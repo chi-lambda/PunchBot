@@ -6,19 +6,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PunchBotCore2.Controllers;
 
-public class HomeController(PunchContext context) : Controller
+public class HomeController(IDbContextFactory<PunchContext> contextFactory) : Controller
 {
     private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
     private readonly TimeSpan minBreakDuration = TimeSpan.FromMinutes(30);
-    private IQueryable<PunchEntry> PunchEntries { get; } = context.PunchEntries;
 
-    public ActionResult Index()
+    public async Task<ActionResult> Index()
     {
-        return View(GetIndexData());
+        return View(await GetIndexData());
     }
 
-    private IndexData GetIndexData()
+    private async Task<IndexData> GetIndexData()
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
         PunchEntry lastEntry = punchEntries.OrderByDescending(e => e.Time).First();
         DateTime now = DateTime.Now;
@@ -50,6 +50,7 @@ public class HomeController(PunchContext context) : Controller
     {
         DateTime now = DateTime.Now;
 
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
 
         PunchEntry lastEntry = punchEntries.OrderByDescending(e => e.Time).First();
@@ -67,6 +68,7 @@ public class HomeController(PunchContext context) : Controller
         DateTime startTime = today.AddHours(8);
         DateTime endTime = startTime + DailyWorkTime;
 
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
 
         punchEntries.Add(new PunchEntry { Kind = Kind.In, Time = startTime });
@@ -75,8 +77,9 @@ public class HomeController(PunchContext context) : Controller
         return RedirectToAction("Index");
     }
 
-    public ActionResult Week()
+    public async Task<ActionResult> Week()
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(DateTime.Now) };
         return View(week);
     }
@@ -88,25 +91,29 @@ public class HomeController(PunchContext context) : Controller
     //     return Redirect("Index");
     // }
 
-    public ActionResult ListAll()
+    public async Task<ActionResult> ListAll()
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         return View(context.PunchEntries.OrderByDescending(x => x.Time).ToList());
     }
 
-    public ActionResult Edit(int id)
+    public async Task<ActionResult> Edit(int id)
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         return View(context.PunchEntries.Find(id));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public ActionResult Edit(PunchEntry entry)
+    public async Task<ActionResult> Edit(PunchEntry entry)
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         context.PunchEntries.Update(entry);
         return RedirectToAction("ListAll");
     }
 
     public async Task<ActionResult> Delete(int id)
     {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         PunchEntry? entryToDelete = context.PunchEntries.Find(id);
         Console.WriteLine("Found {0}", entryToDelete);
         if (entryToDelete is not null)
@@ -123,9 +130,10 @@ public class HomeController(PunchContext context) : Controller
     //     return File(content, "application/octet-stream", "times.db");
     // }
 
-    public ContentResult Export()
+    public async Task<ContentResult> Export()
     {
         const string header = "insert into\n    punch_entries(id, time, kind)\nvalues\n";
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
         IEnumerable<string> result = context.PunchEntries
             .OrderBy(x => x.Time)
             .Select(x => x.ToSqlRow());
