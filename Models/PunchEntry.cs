@@ -1,23 +1,22 @@
-﻿namespace PunchBotCore2.Models
+﻿namespace PunchBotCore2.Models;
+
+public enum Kind { In, Out }
+
+public class PunchEntry
 {
-    public enum Kind { In, Out }
+    public const string TableName = "punch";
 
-    public class PunchEntry
+    public int Id { get; set; }
+    public DateTime Time { get; set; }
+    public Kind Kind { get; set; }
+
+    public string ToSqlRow()
     {
-        public const string TableName = "punch";
+        return $"    ('{Time:u}','{Kind}')";
+    }
 
-        public int Id { get; set; }
-        public DateTime Time { get; set; }
-        public Kind Kind { get; set; }
-
-        public string ToSqlRow()
-        {
-            return $"    ('{Time:u}','{Kind}')";
-        }
-
-        public override string ToString()
-        {
-            return $"Id\t{Time}\t{Kind}";
-        }
+    public override string ToString()
+    {
+        return $"Id\t{Time}\t{Kind}";
     }
 }

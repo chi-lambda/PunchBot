@@ -1,95 +1,94 @@
 ﻿using LiteDB;
 using PunchBotCore2.Models;
 
-namespace PunchBotCore2.Util
+namespace PunchBotCore2.Util;
+
+public static class TimeUtils
 {
-    public static class TimeUtils
+    public static List<Activity> GetDailyTimeSpans(this LiteDatabase db, DateTime time)
     {
-        public static List<Activity> GetDailyTimeSpans(this LiteDatabase db, DateTime time)
-        {
-            DateTime startOfDay = time.Date;
-            return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
-        }
+        DateTime startOfDay = time.Date;
+        return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
+    }
 
-        public static List<Activity> GetDailyBreakTimeSpans(this LiteDatabase db, DateTime time)
-        {
-            DateTime startOfDay = time.Date;
-            return db.GetBreakTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
-        }
+    public static List<Activity> GetDailyBreakTimeSpans(this LiteDatabase db, DateTime time)
+    {
+        DateTime startOfDay = time.Date;
+        return db.GetBreakTimeSpansForQuery(Query.And(Query.GTE("Time", startOfDay), Query.LTE("Time", time)));
+    }
 
-        public static List<Activity> GetWeeklyTimeSpans(this LiteDatabase db, DateTime time)
-        {
-            var differenceToMonday = ((int)time.DayOfWeek + 6) % 7;
-            DateTime monday = time.AddDays(-differenceToMonday).Date;
-            return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", monday), Query.LTE("Time", time)));
-        }
+    public static List<Activity> GetWeeklyTimeSpans(this LiteDatabase db, DateTime time)
+    {
+        var differenceToMonday = ((int)time.DayOfWeek + 6) % 7;
+        DateTime monday = time.AddDays(-differenceToMonday).Date;
+        return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", monday), Query.LTE("Time", time)));
+    }
 
-        public static List<Activity> GetMonthlyTimeSpans(this LiteDatabase db, DateTime time)
-        {
-            DateTime firstOfMonth = new(time.Year, time.Month, 1);
-            return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", firstOfMonth), Query.LTE("Time", time)));
-        }
+    public static List<Activity> GetMonthlyTimeSpans(this LiteDatabase db, DateTime time)
+    {
+        DateTime firstOfMonth = new(time.Year, time.Month, 1);
+        return db.GetWorkTimeSpansForQuery(Query.And(Query.GTE("Time", firstOfMonth), Query.LTE("Time", time)));
+    }
 
-        public static List<Activity> GetAllTimeSpans(this LiteDatabase db, DateTime until)
-        {
-            return db.GetWorkTimeSpansForQuery(Query.LTE("Time", until));
-        }
+    public static List<Activity> GetAllTimeSpans(this LiteDatabase db, DateTime until)
+    {
+        return db.GetWorkTimeSpansForQuery(Query.LTE("Time", until));
+    }
 
-        private static List<Activity> GetWorkTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
+    private static List<Activity> GetWorkTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
+    {
+        ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+        col.EnsureIndex(x => x.Time);
+        IEnumerable<PunchEntry> entries = col.Find(query);
+        DateTime? lastPunchInTime = null;
+        List<Activity> timeSpans = [];
+        foreach (PunchEntry punch in entries)
         {
-            ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
-            col.EnsureIndex(x => x.Time);
-            IEnumerable<PunchEntry> entries = col.Find(query);
-            DateTime? lastPunchInTime = null;
-            List<Activity> timeSpans = [];
-            foreach (PunchEntry punch in entries)
+            switch (punch.Kind)
             {
-                switch (punch.Kind)
-                {
-                    case Kind.In:
-                        lastPunchInTime = punch.Time;
-                        break;
-                    case Kind.Out:
-                        if (lastPunchInTime == null) { continue; }
-                        timeSpans.Add(new Activity { Start = lastPunchInTime.Value, End = punch.Time });
-                        lastPunchInTime = null;
-                        break;
-                }
+                case Kind.In:
+                    lastPunchInTime = punch.Time;
+                    break;
+                case Kind.Out:
+                    if (lastPunchInTime == null) { continue; }
+                    timeSpans.Add(new Activity { Start = lastPunchInTime.Value, End = punch.Time });
+                    lastPunchInTime = null;
+                    break;
             }
-            if (lastPunchInTime != null)
-            {
-                timeSpans.Add(new Activity { Start = lastPunchInTime.Value });
-            }
-            return timeSpans;
         }
-
-        private static List<Activity> GetBreakTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
+        if (lastPunchInTime != null)
         {
-            ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
-            col.EnsureIndex(x => x.Time);
-            IEnumerable<PunchEntry> entries = col.Find(query).Skip(1);
-            DateTime? lastPunchOutTime = null;
-            List<Activity> timeSpans = [];
-            foreach (PunchEntry punch in entries)
-            {
-                switch (punch.Kind)
-                {
-                    case Kind.Out:
-                        lastPunchOutTime = punch.Time;
-                        break;
-                    case Kind.In:
-                        if (lastPunchOutTime == null) { continue; }
-                        timeSpans.Add(new Activity { Start = lastPunchOutTime.Value, End = punch.Time });
-                        lastPunchOutTime = null;
-                        break;
-                }
-            }
-            if (lastPunchOutTime != null)
-            {
-                timeSpans.Add(new Activity { Start = lastPunchOutTime.Value });
-            }
-            return timeSpans;
+            timeSpans.Add(new Activity { Start = lastPunchInTime.Value });
         }
+        return timeSpans;
+    }
+
+    private static List<Activity> GetBreakTimeSpansForQuery(this LiteDatabase db, BsonExpression query)
+    {
+        ILiteCollection<PunchEntry> col = db.GetCollection<PunchEntry>(PunchEntry.TableName);
+        col.EnsureIndex(x => x.Time);
+        IEnumerable<PunchEntry> entries = col.Find(query).Skip(1);
+        DateTime? lastPunchOutTime = null;
+        List<Activity> timeSpans = [];
+        foreach (PunchEntry punch in entries)
+        {
+            switch (punch.Kind)
+            {
+                case Kind.Out:
+                    lastPunchOutTime = punch.Time;
+                    break;
+                case Kind.In:
+                    if (lastPunchOutTime == null) { continue; }
+                    timeSpans.Add(new Activity { Start = lastPunchOutTime.Value, End = punch.Time });
+                    lastPunchOutTime = null;
+                    break;
+            }
+        }
+        if (lastPunchOutTime != null)
+        {
+            timeSpans.Add(new Activity { Start = lastPunchOutTime.Value });
+        }
+        return timeSpans;
     }
 }
 
