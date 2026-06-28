@@ -29,7 +29,7 @@
             }
             <tr>
                 <td></td><td></td><td></td>
-                <td><strong>@Model.Sum.ToString(@"hh\:mm")</strong></td>
+            <td><strong>@((int)Model.Sum.TotalHours):@(Model.Sum.Minutes.ToString("00"))</strong></td>
             </tr>
         </tbody>
     </table>

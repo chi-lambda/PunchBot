@@ -21,7 +21,7 @@
         {
             <tr>
                 <td>@entry.Id</td>
-                <td>@entry.Time</td>
+                <td>@entry.Time.ToString("yyyy-MM-dd HH:mm")</td>
                 <td>@entry.Kind</td>
                 <td>
                     @Html.ActionLink("Edit", "Edit", new { id = entry.Id }, new { @class = "w3-button w3-green" })
