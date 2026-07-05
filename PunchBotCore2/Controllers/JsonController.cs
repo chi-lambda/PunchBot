@@ -36,7 +36,9 @@ public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Patch(PunchEntry entry)
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        context.PunchEntries.Update(entry);
+        await context.PunchEntries
+            .Where(e => e.Id == entry.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.Time, _ => entry.Time));
         await context.SaveChangesAsync();
         return Ok();
     }
@@ -44,12 +46,7 @@ public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Delete(int id)
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        PunchEntry? entryToDelete = context.PunchEntries.Find(id);
-        if (entryToDelete is not null)
-        {
-            context.PunchEntries.Remove(entryToDelete);
-            await context.SaveChangesAsync();
-        }
+        await context.PunchEntries.Where(e => e.Id == id).ExecuteDeleteAsync();
 
         return NoContent();
     }
