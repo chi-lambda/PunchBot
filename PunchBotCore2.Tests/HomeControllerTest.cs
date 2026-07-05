@@ -55,7 +55,7 @@ public sealed class HomeControllerTest
     [TestMethod]
     public async Task Index_TwoPunchesAdded()
     {
-        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10), DateTime.Today.AddHours(12)]);
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(12)]);
         TestPunchContextFactory contextFactory = new();
         HomeController controller = new(contextFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
