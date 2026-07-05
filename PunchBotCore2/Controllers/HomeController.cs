@@ -65,7 +65,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
     [HttpPost]
     public async Task<ActionResult> Holiday()
     {
-        DateTime today = DateTime.Today;
+        DateTime today = dateTimeService.Today;
         DateTime startTime = today.AddHours(8);
         DateTime endTime = startTime + DailyWorkTime;
 

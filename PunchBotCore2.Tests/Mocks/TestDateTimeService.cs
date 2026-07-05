@@ -32,4 +32,21 @@ public class TestDateTimeService : IDateTimeService
             }
         }
     }
+
+    public DateTime Today
+    {
+        get
+        {
+            if (_dates.MoveNext())
+            {
+                return _dates.Current.Date;
+            }
+            else
+            {
+                _dates.Reset();
+                _dates.MoveNext();
+                return _dates.Current.Date;
+            }
+        }
+    }
 }
