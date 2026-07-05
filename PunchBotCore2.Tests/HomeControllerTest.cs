@@ -165,5 +165,78 @@ public sealed class HomeControllerTest
         }
     }
 
+    [TestMethod]
+    public async Task Punch_AddsFirstInEntry()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(8)]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+
+        await controller.Punch();
+
+        using PunchContext context = contextFactory.CreateDbContext();
+        Assert.AreEqual(new PunchEntry(1, DateTime.Today.AddHours(8), Kind.In), context.PunchEntries.First());
+    }
+
+    [TestMethod]
+    public async Task Punch_AddsFirstOutEntry()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10)]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            await controller.Punch();
+        }
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            Assert.AreEqual(new PunchEntry(2, DateTime.Today.AddHours(10), Kind.Out), context.PunchEntries.OrderByDescending(e => e.Time).First());
+        }
+    }
+
+    [TestMethod]
+    public async Task Punch_AddsSecondInEntry()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(12)]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(default, DateTime.Today.AddHours(10), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            await controller.Punch();
+        }
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            Assert.AreEqual(new PunchEntry(3, DateTime.Today.AddHours(12), Kind.In), context.PunchEntries.OrderByDescending(e => e.Time).First());
+        }
+    }
+
+    [TestMethod]
+    public async Task Holiday_AddsTwoPunches()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+
+        await controller.Holiday();
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            Assert.AreEqual(2, context.PunchEntries.Count());
+            var foo = DateTime.Today.AddHours(8);
+            List<PunchEntry> entries = context.PunchEntries.OrderBy(e => e.Time).ToList();
+            Assert.AreEqual(new PunchEntry(1, DateTime.Today.AddHours(8), Kind.In), entries[0]);
+            Assert.AreEqual(new PunchEntry(2, DateTime.Today.AddHours(15), Kind.Out), entries[1]);
+        }
+
+    }
+
 }
 
