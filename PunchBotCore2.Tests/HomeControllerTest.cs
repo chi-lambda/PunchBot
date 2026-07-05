@@ -16,7 +16,7 @@ public sealed class HomeControllerTest
     public async Task Index_WorksWithInitialDatabase()
     {
         IDateTimeService dateTimeService = new DateTimeService();
-        HomeController controller = new(new TestPunchContextFactory(dateTimeService), dateTimeService);
+        HomeController controller = new(new TestPunchContextFactory(), dateTimeService);
         ActionResult result = await controller.Index();
         Assert.IsInstanceOfType<ViewResult>(result);
         ViewResult viewResult = (ViewResult)result;
@@ -33,7 +33,7 @@ public sealed class HomeControllerTest
     public async Task Index_OnePunchAdded()
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10)]);
-        TestPunchContextFactory contextFactory = new(dateTimeService);
+        TestPunchContextFactory contextFactory = new();
         HomeController controller = new(contextFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -51,12 +51,12 @@ public sealed class HomeControllerTest
         Assert.AreEqual(new(1, DateTime.Today.AddHours(8), Kind.In), model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
     }
-    
+
     [TestMethod]
     public async Task Index_TwoPunchesAdded()
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10), DateTime.Today.AddHours(12)]);
-        TestPunchContextFactory contextFactory = new(dateTimeService);
+        TestPunchContextFactory contextFactory = new();
         HomeController controller = new(contextFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -75,4 +75,56 @@ public sealed class HomeControllerTest
         Assert.AreEqual(new(2, DateTime.Today.AddHours(10), Kind.Out), model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
     }
+
+    [TestMethod]
+    public async Task Index_ThreePunchesAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(14)]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(10), Kind.Out));
+            context.PunchEntries.Add(new(3, DateTime.Today.AddHours(12), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Index();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<IndexData>(viewResult.Model);
+        IndexData model = (IndexData)viewResult.Model;
+        Assert.AreEqual(TimeSpan.FromHours(4), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(4), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DayBreakSum);
+        Assert.AreEqual(new(3, DateTime.Today.AddHours(12), Kind.In), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(3), model.RemainingTime);
+    }
+    [TestMethod]
+
+    public async Task Index_FourPunchesAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(16)]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(12), Kind.Out));
+            context.PunchEntries.Add(new(3, DateTime.Today.AddHours(13), Kind.In));
+            context.PunchEntries.Add(new(4, DateTime.Today.AddHours(16), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Index();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<IndexData>(viewResult.Model);
+        IndexData model = (IndexData)viewResult.Model;
+        Assert.AreEqual(TimeSpan.FromHours(7), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(7), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(1), model.DayBreakSum);
+        Assert.AreEqual(new(4, DateTime.Today.AddHours(16), Kind.Out), model.LastEntry);
+        Assert.AreEqual(TimeSpan.Zero, model.RemainingTime);
+    }
 }
+

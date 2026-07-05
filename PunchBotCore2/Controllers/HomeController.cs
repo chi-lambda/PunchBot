@@ -27,7 +27,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
 
         var numDays = punchEntries.GroupBy(x => x.Time.Date).Count();
         TimeSpan remainingTime = numDays * DailyWorkTime - totalSum;
-        if (remainingTime <= TimeSpan.Zero)
+        if (remainingTime <= TimeSpan.Zero && !context.HasWorkedToday(now))
         {
             remainingTime = DailyWorkTime + remainingTime;
         }
