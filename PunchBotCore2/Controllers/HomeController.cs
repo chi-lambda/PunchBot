@@ -85,13 +85,6 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
         return View(week);
     }
 
-    // public ActionResult Clear()
-    // {
-    //     using var _db = new LiteDatabase(dbFilename);
-    //     _db.DropCollection(PunchEntry.TableName);
-    //     return Redirect("Index");
-    // }
-
     public async Task<ActionResult> ListAll()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
