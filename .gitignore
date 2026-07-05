@@ -481,3 +481,7 @@ $RECYCLE.BIN/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# code coverage statistics
+**/covstats/
+lcov.info
