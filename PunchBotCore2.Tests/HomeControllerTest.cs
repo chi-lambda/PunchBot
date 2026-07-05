@@ -126,5 +126,44 @@ public sealed class HomeControllerTest
         Assert.AreEqual(new(4, DateTime.Today.AddHours(16), Kind.Out), model.LastEntry);
         Assert.AreEqual(TimeSpan.Zero, model.RemainingTime);
     }
+
+    [TestMethod]
+    public async Task Delete_RemovesRow()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService();
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            Assert.AreEqual(1, context.PunchEntries.Count());
+        }
+        await controller.Delete(1);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            Assert.AreEqual(0, context.PunchEntries.Count());
+        }
+    }
+
+    [TestMethod]
+    public async Task Edit_UpdatesTime()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService();
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            Assert.AreEqual(1, context.PunchEntries.Count());
+        }
+        await controller.Edit(new PunchEntry(1, DateTime.Today.AddHours(10), Kind.In));
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            Assert.AreEqual(DateTime.Today.AddHours(10), context.PunchEntries.First().Time);
+        }
+    }
+
 }
 
