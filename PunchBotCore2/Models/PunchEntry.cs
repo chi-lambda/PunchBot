@@ -13,6 +13,6 @@ public record PunchEntry(int Id, DateTime Time, Kind Kind)
 
     public override string ToString()
     {
-        return $"{Id}\t{Time}\t{Kind}";
+        return $"{Id}\t{Time:O}\t{Kind}";
     }
 }
