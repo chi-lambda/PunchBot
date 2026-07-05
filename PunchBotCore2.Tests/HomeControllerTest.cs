@@ -30,6 +30,29 @@ public sealed class HomeControllerTest
     }
 
     [TestMethod]
+    public async Task Index_OnePunchAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10)]);
+        TestPunchContextFactory contextFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Index();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<IndexData>(viewResult.Model);
+        IndexData model = (IndexData)viewResult.Model;
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.WeekSum);
+        Assert.AreEqual(TimeSpan.Zero, model.DayBreakSum);
+        Assert.AreEqual(new(1, DateTime.Today.AddHours(8), Kind.In), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
+    }
+    
+    [TestMethod]
     public async Task Index_TwoPunchesAdded()
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10), DateTime.Today.AddHours(12)]);
