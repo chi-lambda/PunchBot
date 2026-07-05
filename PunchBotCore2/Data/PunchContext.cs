@@ -64,7 +64,7 @@ public class PunchContext(DbContextOptions<PunchContext> options, IDateTimeServi
         }
         if (lastPunchInTime != null)
         {
-            timeSpans.Add(new Activity(lastPunchInTime.Value, default));
+            timeSpans.Add(new Activity(lastPunchInTime.Value, dateTimeService.Now));
         }
         return timeSpans;
     }
