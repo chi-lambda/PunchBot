@@ -94,7 +94,12 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Edit(int id)
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        return View(context.PunchEntries.Find(id));
+        PunchEntry? entry = context.PunchEntries.Find(id);
+        if (entry is not null)
+        {
+            return View(entry);
+        }
+        return NotFound();
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -113,12 +118,6 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
         await context.PunchEntries.Where(e => e.Id == id).ExecuteDeleteAsync();
         return RedirectToAction("ListAll");
     }
-
-    // public FileResult DownloadDatabase()
-    // {
-    //     var content = System.IO.File.ReadAllBytes(dbFilename);
-    //     return File(content, "application/octet-stream", "times.db");
-    // }
 
     public async Task<ContentResult> Export()
     {
