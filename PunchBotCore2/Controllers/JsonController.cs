@@ -26,10 +26,11 @@ public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDat
         return new JsonResult(result);
     }
 
-    public async Task<JsonResult> Get(int id)
+    public async Task<IActionResult> Get(int id)
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        return new JsonResult(context.PunchEntries.Find(id));
+        PunchEntry? entry = context.PunchEntries.Find(id);
+        return entry is not null ? new JsonResult(entry) : NotFound();
     }
 
     [HttpPatch]
