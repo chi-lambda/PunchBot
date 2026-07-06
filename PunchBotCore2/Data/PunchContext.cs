@@ -99,7 +99,7 @@ public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(op
         }
         return timeSpans;
     }
-    public async Task Migrate(LiteDB.LiteDatabase db)
+    public async Task Migrate(LiteDB.ILiteDatabase db)
     {
         if (await PunchEntries.AnyAsync())
         {

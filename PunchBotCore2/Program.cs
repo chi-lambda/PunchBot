@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Data;
 using PunchBotCore2.Util;
 
 namespace PunchBotCore2;
 
+[ExcludeFromCodeCoverage]
 public class Program
 {
     private const string dbFilename = "times.db";
@@ -15,7 +17,7 @@ public class Program
         // Add services to the container.
         builder.Services.AddControllersWithViews();
         builder.Services.AddSingleton<IDateTimeService>(new DateTimeService());
-        builder.Services.AddSingleton(new LiteDB.LiteDatabase(dbFilename));
+        builder.Services.AddSingleton<LiteDB.ILiteDatabase>(new LiteDB.LiteDatabase(dbFilename));
         builder.Services.AddDbContextFactory<PunchContext>(
             options => options.UseSqlite(builder.Configuration.GetConnectionString("PunchContextSQLite")));
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -34,13 +36,13 @@ public class Program
             app.UseDeveloperExceptionPage();
             app.UseMigrationsEndPoint();
         }
-        
+
         using (AsyncServiceScope scope = app.Services.CreateAsyncScope())
         {
             IServiceProvider services = scope.ServiceProvider;
             PunchContext context = services.GetRequiredService<PunchContext>();
             context.Database.EnsureCreated();
-            LiteDB.LiteDatabase liteDB = services.GetRequiredService<LiteDB.LiteDatabase>();
+            LiteDB.ILiteDatabase liteDB = services.GetRequiredService<LiteDB.ILiteDatabase>();
             await context.Migrate(liteDB);
         }
 
