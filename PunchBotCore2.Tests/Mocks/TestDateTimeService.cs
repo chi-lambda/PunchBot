@@ -27,8 +27,14 @@ public class TestDateTimeService : IDateTimeService
             else
             {
                 _dates.Reset();
-                _dates.MoveNext();
-                return _dates.Current;
+                if (_dates.MoveNext())
+                {
+                    return _dates.Current;
+                }
+                else
+                {
+                    throw new InvalidOperationException("Date was requested from TestDateTimeService, but none were provided");
+                }
             }
         }
     }
@@ -44,8 +50,14 @@ public class TestDateTimeService : IDateTimeService
             else
             {
                 _dates.Reset();
-                _dates.MoveNext();
-                return _dates.Current.Date;
+                if (_dates.MoveNext())
+                {
+                    return _dates.Current.Date;
+                }
+                else
+                {
+                    throw new InvalidOperationException("Date was requested from TestDateTimeService, but none were provided");
+                }
             }
         }
     }
