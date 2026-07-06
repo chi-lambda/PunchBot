@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using PunchBotCore2.Controllers;
 using PunchBotCore2.Data;
 using PunchBotCore2.Models;
@@ -166,6 +167,59 @@ public sealed class HomeControllerTest
     }
 
     [TestMethod]
+    public async Task Edit_ShowsView()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService();
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            Assert.AreEqual(1, context.PunchEntries.Count());
+        }
+        ActionResult result = await controller.Edit(1);
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<PunchEntry>(viewResult.Model);
+        PunchEntry model = (PunchEntry)viewResult.Model;
+        Assert.AreEqual(1, model.Id);
+        Assert.AreEqual(DateTime.Today.AddHours(8), model.Time);
+        Assert.AreEqual(Kind.In, model.Kind);
+    }
+
+    [TestMethod]
+    public async Task Edit_Returns404()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService();
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            Assert.AreEqual(1, context.PunchEntries.Count());
+        }
+        ActionResult result = await controller.Edit(2);
+        Assert.IsInstanceOfType<NotFoundResult>(result);
+    }
+
+    [TestMethod]
+    public async Task Edit_PostReturns404()
+    {
+        IDateTimeService dateTimeService = new DateTimeService();
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Edit(new PunchEntry(2, DateTime.Today.AddHours(10), Kind.In));
+        Assert.IsInstanceOfType<NotFoundResult>(result);
+    }
+
+    [TestMethod]
     public async Task Punch_AddsFirstInEntry()
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(8)]);
@@ -189,8 +243,9 @@ public sealed class HomeControllerTest
         {
             context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
             await context.SaveChangesAsync(TestContext.CancellationToken);
-            await controller.Punch();
         }
+
+        await controller.Punch();
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -210,8 +265,9 @@ public sealed class HomeControllerTest
             context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
             context.PunchEntries.Add(new(default, DateTime.Today.AddHours(10), Kind.Out));
             await context.SaveChangesAsync(TestContext.CancellationToken);
-            await controller.Punch();
         }
+
+        await controller.Punch();
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -230,7 +286,7 @@ public sealed class HomeControllerTest
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             Assert.AreEqual(2, context.PunchEntries.Count());
-            var foo = DateTime.Today.AddHours(8);
+            DateTime foo = DateTime.Today.AddHours(8);
             List<PunchEntry> entries = context.PunchEntries.OrderBy(e => e.Time).ToList();
             Assert.AreEqual(new PunchEntry(1, DateTime.Today.AddHours(8), Kind.In), entries[0]);
             Assert.AreEqual(new PunchEntry(2, DateTime.Today.AddHours(15), Kind.Out), entries[1]);
@@ -238,5 +294,102 @@ public sealed class HomeControllerTest
 
     }
 
-}
+    [TestMethod]
+    public async Task Week_ReturnsOneDay()
+    {
+        DateTime monday = new(2026, 07, 06);
+        DateTime fridayEOD = monday.AddDays(4).AddHours(23);
+        IDateTimeService dateTimeService = new TestDateTimeService([fridayEOD]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
 
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(default, monday.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(default, monday.AddHours(11), Kind.Out));
+            context.PunchEntries.Add(new(default, monday.AddHours(12), Kind.In));
+            context.PunchEntries.Add(new(default, monday.AddHours(16), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+
+        ActionResult result = await controller.Week();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<Week>(viewResult.Model);
+        Week model = (Week)viewResult.Model;
+        Assert.HasCount(2, model.TimeSpans);
+        Assert.AreEqual(TimeSpan.FromHours(7), model.Sum);
+    }
+
+    [TestMethod]
+    public async Task Week_ReturnsWholeWeek()
+    {
+        DateTime monday = new(2026, 07, 06);
+        DateTime fridayEOD = monday.AddDays(4).AddHours(23);
+        IDateTimeService dateTimeService = new TestDateTimeService([fridayEOD]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(8), Kind.In));
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(11), Kind.Out));
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(12), Kind.In));
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(16), Kind.Out));
+            }
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+
+        ActionResult result = await controller.Week();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<Week>(viewResult.Model);
+        Week model = (Week)viewResult.Model;
+        Assert.HasCount(2 * 5, model.TimeSpans);
+        Assert.AreEqual(TimeSpan.FromHours(35), model.Sum);
+    }
+
+    [TestMethod]
+    public async Task ListAll_ReturnsEverything()
+    {
+        DateTime monday = new(2026, 07, 06);
+        DateTime fridayEOD = monday.AddDays(4).AddHours(23);
+        IDateTimeService dateTimeService = new TestDateTimeService([]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(8), Kind.In));
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(11), Kind.Out));
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(12), Kind.In));
+                context.PunchEntries.Add(new(default, monday.AddDays(i).AddHours(16), Kind.Out));
+            }
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+
+        ActionResult result = await controller.ListAll();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<List<PunchEntry>>(viewResult.Model);
+        List<PunchEntry> model = (List<PunchEntry>)viewResult.Model;
+        Assert.HasCount(4 * 5, model);
+    }
+
+    [TestMethod]
+    public async Task Error_ReturnsErrorViewModel()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        controller.ControllerContext.HttpContext = new DefaultHttpContext();
+        IActionResult result = await controller.Error();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<ErrorViewModel>(viewResult.Model);
+    }
+}
