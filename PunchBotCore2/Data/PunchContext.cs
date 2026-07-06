@@ -32,12 +32,6 @@ public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(op
         return GetWorkTimeSpansForQuery(e => e.Time >= monday && e.Time <= time, time);
     }
 
-    public List<Activity> GetMonthlyTimeSpans(DateTime time)
-    {
-        DateTime firstOfMonth = new(time.Year, time.Month, 1);
-        return GetWorkTimeSpansForQuery(e => e.Time >= firstOfMonth && e.Time <= time, time);
-    }
-
     public List<Activity> GetAllTimeSpans(DateTime time)
     {
         return GetWorkTimeSpansForQuery(e => e.Time <= time, time);

@@ -119,23 +119,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
         return RedirectToAction("ListAll");
     }
 
-    public async Task<ContentResult> Export()
-    {
-        const string header = "insert into\n    punch_entries(id, time, kind)\nvalues\n";
-        using PunchContext context = await contextFactory.CreateDbContextAsync();
-        IEnumerable<string> result = context.PunchEntries
-            .OrderBy(x => x.Time)
-            .Select(x => x.ToSqlRow());
-
-        return new ContentResult
-        {
-            Content = header + string.Join(",\n", result) + ";",
-            ContentType = "application/sql",
-            StatusCode = 200
-        };
-    }
-
-    public IActionResult Error()
+    public async Task<IActionResult> Error()
     {
         return base.View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
