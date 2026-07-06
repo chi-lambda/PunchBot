@@ -106,10 +106,10 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Edit(PunchEntry entry)
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        await context.PunchEntries
+        int updatedRows = await context.PunchEntries
             .Where(e => e.Id == entry.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.Time, _ => entry.Time));
-        return RedirectToAction("ListAll");
+        return updatedRows > 0 ? RedirectToAction("ListAll") : NotFound();
     }
 
     public async Task<ActionResult> Delete(int id)

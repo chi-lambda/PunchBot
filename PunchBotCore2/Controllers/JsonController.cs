@@ -36,11 +36,10 @@ public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Patch(PunchEntry entry)
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        await context.PunchEntries
+        int updatedRows = await context.PunchEntries
             .Where(e => e.Id == entry.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.Time, _ => entry.Time));
-        await context.SaveChangesAsync();
-        return Ok();
+        return updatedRows > 0 ? Ok() : NotFound();
     }
 
     public async Task<ActionResult> Delete(int id)
