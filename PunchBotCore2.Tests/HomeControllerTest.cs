@@ -16,7 +16,7 @@ public sealed class HomeControllerTest
     [TestMethod]
     public async Task Index_WorksWithInitialDatabase()
     {
-        IDateTimeService dateTimeService = new DateTimeService();
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
         HomeController controller = new(new TestPunchContextFactory(), dateTimeService);
         ActionResult result = await controller.Index();
         Assert.IsInstanceOfType<ViewResult>(result);
@@ -28,6 +28,7 @@ public sealed class HomeControllerTest
         Assert.AreEqual(TimeSpan.Zero, model.DayBreakSum);
         Assert.IsNull(model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(7), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
     }
 
     [TestMethod]
@@ -51,6 +52,7 @@ public sealed class HomeControllerTest
         Assert.AreEqual(TimeSpan.Zero, model.DayBreakSum);
         Assert.AreEqual(new(1, DateTime.Today.AddHours(8), Kind.In), model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
     }
 
     [TestMethod]
@@ -75,6 +77,7 @@ public sealed class HomeControllerTest
         Assert.AreEqual(TimeSpan.FromHours(2), model.DayBreakSum);
         Assert.AreEqual(new(2, DateTime.Today.AddHours(10), Kind.Out), model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
     }
 
     [TestMethod]
@@ -100,12 +103,13 @@ public sealed class HomeControllerTest
         Assert.AreEqual(TimeSpan.FromHours(2), model.DayBreakSum);
         Assert.AreEqual(new(3, DateTime.Today.AddHours(12), Kind.In), model.LastEntry);
         Assert.AreEqual(TimeSpan.FromHours(3), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
     }
     [TestMethod]
 
     public async Task Index_FourPunchesAdded()
     {
-        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(16)]);
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
         TestPunchContextFactory contextFactory = new();
         HomeController controller = new(contextFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
@@ -126,6 +130,34 @@ public sealed class HomeControllerTest
         Assert.AreEqual(TimeSpan.FromHours(1), model.DayBreakSum);
         Assert.AreEqual(new(4, DateTime.Today.AddHours(16), Kind.Out), model.LastEntry);
         Assert.AreEqual(TimeSpan.Zero, model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
+    }
+
+[TestMethod]
+    public async Task Index_FourPunchesAdded_WithOvertime()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
+        TestPunchContextFactory contextFactory = new();
+        HomeController controller = new(contextFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(12), Kind.Out));
+            context.PunchEntries.Add(new(3, DateTime.Today.AddHours(13), Kind.In));
+            context.PunchEntries.Add(new(4, DateTime.Today.AddHours(17), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Index();
+        Assert.IsInstanceOfType<ViewResult>(result);
+        ViewResult viewResult = (ViewResult)result;
+        Assert.IsInstanceOfType<IndexData>(viewResult.Model);
+        IndexData model = (IndexData)viewResult.Model;
+        Assert.AreEqual(TimeSpan.FromHours(8), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(8), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(1), model.DayBreakSum);
+        Assert.AreEqual(new(4, DateTime.Today.AddHours(17), Kind.Out), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(-1), model.RemainingTime);
+        Assert.AreEqual("-", model.RemainingTimeSign);
     }
 
     [TestMethod]
