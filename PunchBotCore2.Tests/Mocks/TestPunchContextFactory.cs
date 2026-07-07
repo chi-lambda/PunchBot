@@ -1,7 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Data;
-using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Tests.Mocks;
 
