@@ -12,16 +12,16 @@ public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<JsonResult> Week()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(dateTimeService.Now) };
+        Week week = new() { TimeSpans = await context.GetWeeklyTimeSpans(dateTimeService.Now) };
         return new JsonResult(week);
     }
 
     public async Task<JsonResult> ListAll()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        List<PunchEntry> result = context.PunchEntries
+        List<PunchEntry> result = await context.PunchEntries
             .OrderByDescending(x => x.Time)
-            .ToList();
+            .ToListAsync();
 
         return new JsonResult(result);
     }

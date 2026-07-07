@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Microsoft.AspNetCore.Mvc.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Models;
 using PunchBotCore2.Util;
@@ -13,28 +14,28 @@ public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(op
     {
         modelBuilder.Entity<PunchEntry>().ToTable("PunchEntries");
     }
-    public List<Activity> GetDailyTimeSpans(DateTime time)
+    public async Task<List<Activity>> GetDailyTimeSpans(DateTime time)
     {
         DateTime startOfDay = time.Date;
-        return GetWorkTimeSpansForQuery(e => e.Time >= startOfDay && e.Time <= time, time);
+        return await GetWorkTimeSpansForQuery(e => e.Time >= startOfDay && e.Time <= time, time);
     }
 
-    public List<Activity> GetDailyBreakTimeSpans(DateTime time)
+    public async Task<List<Activity>> GetDailyBreakTimeSpans(DateTime time)
     {
         DateTime startOfDay = time.Date;
-        return GetBreakTimeSpansForQuery(e => e.Time >= startOfDay && e.Time <= time, time);
+        return await GetBreakTimeSpansForQuery(e => e.Time >= startOfDay && e.Time <= time, time);
     }
 
-    public List<Activity> GetWeeklyTimeSpans(DateTime time)
+    public async Task<List<Activity>> GetWeeklyTimeSpans(DateTime time)
     {
         var differenceToMonday = ((int)time.DayOfWeek + 6) % 7;
         DateTime monday = time.AddDays(-differenceToMonday).Date;
-        return GetWorkTimeSpansForQuery(e => e.Time >= monday && e.Time <= time, time);
+        return await GetWorkTimeSpansForQuery(e => e.Time >= monday && e.Time <= time, time);
     }
 
-    public List<Activity> GetAllTimeSpans(DateTime time)
+    public async Task<List<Activity>> GetAllTimeSpans(DateTime time)
     {
-        return GetWorkTimeSpansForQuery(e => e.Time <= time, time);
+        return await GetWorkTimeSpansForQuery(e => e.Time <= time, time);
     }
 
     public bool HasWorkedToday(DateTime time)
@@ -42,55 +43,64 @@ public class PunchContext(DbContextOptions<PunchContext> options) : DbContext(op
         return PunchEntries.Any(e => e.Time >= time.Date);
     }
 
-    private List<Activity> GetWorkTimeSpansForQuery(Expression<Func<PunchEntry, bool>> query, DateTime time)
+    private async Task<List<Activity>> GetWorkTimeSpansForQuery(Expression<Func<PunchEntry, bool>> query, DateTime time)
     {
-        IQueryable<PunchEntry> entries = PunchEntries.Where(query).OrderBy(e => e.Time);
-        DateTime? lastPunchInTime = null;
+        IEnumerable<PunchEntry> entries = await PunchEntries
+            .Where(query)
+            .OrderBy(e => e.Time)
+            .ToListAsync();
+        if (!entries.Any())
+        {
+            return [];
+        }
+
+        PunchEntry lastPunch = entries.First();
         List<Activity> timeSpans = [];
         foreach (PunchEntry punch in entries)
         {
-            switch (punch.Kind)
+            if (punch.Kind == Kind.Out)
             {
-                case Kind.In:
-                    lastPunchInTime = punch.Time;
-                    break;
-                case Kind.Out:
-                    if (lastPunchInTime == null) { continue; }
-                    timeSpans.Add(new Activity(lastPunchInTime.Value, punch.Time));
-                    lastPunchInTime = null;
-                    break;
+                timeSpans.Add(new Activity(lastPunch.Time, punch.Time));
             }
+            lastPunch = punch;
         }
-        if (lastPunchInTime != null)
+        
+        if (lastPunch.Kind == Kind.In)
         {
-            timeSpans.Add(new Activity(lastPunchInTime.Value, time));
+            timeSpans.Add(new Activity(lastPunch.Time, time));
         }
         return timeSpans;
     }
 
-    private List<Activity> GetBreakTimeSpansForQuery(Expression<Func<PunchEntry, bool>> query, DateTime time)
+    private async Task<List<Activity>> GetBreakTimeSpansForQuery(Expression<Func<PunchEntry, bool>> query, DateTime time)
     {
-        IQueryable<PunchEntry> entries = PunchEntries.Where(query).OrderBy(e => e.Time).Skip(1);
-        DateTime? lastPunchOutTime = null;
+        IEnumerable<PunchEntry> entries = await PunchEntries
+            .Where(query)
+            .OrderBy(e => e.Time)
+            .Skip(1)
+            .ToListAsync();
+        if (!entries.Any())
+        {
+            return [];
+        }
+
+        PunchEntry lastPunch = entries.First();
         List<Activity> timeSpans = [];
         foreach (PunchEntry punch in entries)
         {
-            switch (punch.Kind)
+            if (punch.Kind== Kind.In)
             {
-                case Kind.Out:
-                    lastPunchOutTime = punch.Time;
-                    break;
-                case Kind.In:
-                    if (lastPunchOutTime == null) { continue; }
-                    timeSpans.Add(new Activity(lastPunchOutTime.Value, punch.Time));
-                    lastPunchOutTime = null;
-                    break;
+                timeSpans.Add(new Activity(lastPunch.Time, punch.Time));
             }
+            lastPunch = punch;
         }
-        if (lastPunchOutTime != null)
+
+        TimeSpan breakSum = timeSpans.Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        if (lastPunch.Kind == Kind.Out && breakSum.TotalMinutes < 30)
         {
-            timeSpans.Add(new Activity(lastPunchOutTime.Value, time));
+            timeSpans.Add(new Activity(lastPunch.Time, time));
         }
+
         return timeSpans;
     }
     public async Task Migrate(LiteDB.ILiteDatabase db)

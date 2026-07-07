@@ -23,7 +23,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
         DbSet<PunchEntry> punchEntries = context.PunchEntries;
         PunchEntry? lastEntry = await punchEntries.OrderByDescending(e => e.Time).FirstOrDefaultAsync();
         DateTime now = dateTimeService.Now;
-        TimeSpan totalSum = context.GetAllTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        TimeSpan totalSum = (await context.GetAllTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
 
         var numDays = punchEntries.GroupBy(x => x.Time.Date).Count();
         TimeSpan remainingTime = numDays * DailyWorkTime - totalSum;
@@ -31,11 +31,11 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
         {
             remainingTime = DailyWorkTime + remainingTime;
         }
-        TimeSpan daySum = context.GetDailyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-        TimeSpan dayBreakSum = context.GetDailyBreakTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        TimeSpan daySum = (await context.GetDailyTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
+        TimeSpan dayBreakSum = (await context.GetDailyBreakTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
         DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? now + remainingTime : now + remainingTime + minBreakDuration - dayBreakSum;
         IndexData indexData = new(
-            WeekSum: context.GetWeeklyTimeSpans(now).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
+            WeekSum: (await context.GetWeeklyTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
             DaySum: daySum,
             LastEntry: lastEntry,
             RemainingTime: remainingTime,
@@ -81,7 +81,7 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Week()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        Week week = new() { TimeSpans = context.GetWeeklyTimeSpans(dateTimeService.Now) };
+        Week week = new() { TimeSpans = await context.GetWeeklyTimeSpans(dateTimeService.Now) };
         return View(week);
     }
 
