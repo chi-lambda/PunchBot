@@ -7,43 +7,19 @@ using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Controllers;
 
-public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDateTimeService dateTimeService) : Controller
+public class HomeController(
+    IDbContextFactory<PunchContext> contextFactory,
+    IDataAggregatorFactory aggregatorFactory,
+    IDateTimeService dateTimeService) : Controller
 {
-    private readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
-    private readonly TimeSpan minBreakDuration = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan DailyWorkTime = TimeSpan.FromHours(7);
+    private static readonly TimeSpan MinBreakDuration = TimeSpan.FromMinutes(30);
 
     public async Task<ActionResult> Index()
     {
-        return View(await GetIndexData());
-    }
-
-    private async Task<IndexData> GetIndexData()
-    {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        DbSet<PunchEntry> punchEntries = context.PunchEntries;
-        PunchEntry? lastEntry = await punchEntries.OrderByDescending(e => e.Time).FirstOrDefaultAsync();
-        DateTime now = dateTimeService.Now;
-        TimeSpan totalSum = (await context.GetAllTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-
-        var numDays = punchEntries.GroupBy(x => x.Time.Date).Count();
-        TimeSpan remainingTime = numDays * DailyWorkTime - totalSum;
-        if (remainingTime <= TimeSpan.Zero && !context.HasWorkedToday(now))
-        {
-            remainingTime = DailyWorkTime + remainingTime;
-        }
-        TimeSpan daySum = (await context.GetDailyTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-        TimeSpan dayBreakSum = (await context.GetDailyBreakTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration);
-        DateTime estimatedEnd = dayBreakSum >= minBreakDuration ? now + remainingTime : now + remainingTime + minBreakDuration - dayBreakSum;
-        IndexData indexData = new(
-            WeekSum: (await context.GetWeeklyTimeSpans(now)).Aggregate(TimeSpan.Zero, (acc, x) => acc + x.Duration),
-            DaySum: daySum,
-            LastEntry: lastEntry,
-            RemainingTime: remainingTime,
-            DayBreakSum: dayBreakSum,
-            EstimatedEnd: estimatedEnd
-        );
-
-        return indexData;
+        DataAggregator aggregator = aggregatorFactory.Create(context);
+        return View(await aggregator.GetIndexData());
     }
 
     [HttpPost]
@@ -81,7 +57,8 @@ public class HomeController(IDbContextFactory<PunchContext> contextFactory, IDat
     public async Task<ActionResult> Week()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        Week week = new() { TimeSpans = await context.GetWeeklyTimeSpans(dateTimeService.Now) };
+        DataAggregator aggregator = aggregatorFactory.Create(context);
+        Week week = new() { TimeSpans = await aggregator.GetWeeklyTimeSpans(dateTimeService.Now) };
         return View(week);
     }
 

@@ -13,11 +13,172 @@ public sealed class JsonControllerTest
     public TestContext TestContext { get; set; }
 
     [TestMethod]
+    public async Task Overview_WorksWithInitialDatabase()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
+        ActionResult result = await controller.Overview();
+        Assert.IsInstanceOfType<JsonResult>(result);
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<IndexData>(jsonResult.Value);
+        IndexData model = (IndexData)jsonResult.Value;
+        Assert.AreEqual(TimeSpan.Zero, model.DaySum);
+        Assert.AreEqual(TimeSpan.Zero, model.WeekSum);
+        Assert.AreEqual(TimeSpan.Zero, model.DayBreakSum);
+        Assert.IsNull(model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(7), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
+    }
+
+    [TestMethod]
+    public async Task Overview_OnePunchAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10)]);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Overview();
+        Assert.IsInstanceOfType<JsonResult>(result);
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<IndexData>(jsonResult.Value);
+        IndexData model = (IndexData)jsonResult.Value;
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.WeekSum);
+        Assert.AreEqual(TimeSpan.Zero, model.DayBreakSum);
+        Assert.AreEqual(new(1, DateTime.Today.AddHours(8), Kind.In), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
+    }
+
+    [TestMethod]
+    public async Task Overview_TwoPunchesAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(12)]);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(10), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Overview();
+        Assert.IsInstanceOfType<JsonResult>(result);
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<IndexData>(jsonResult.Value);
+        IndexData model = (IndexData)jsonResult.Value;
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DayBreakSum);
+        Assert.AreEqual(new(2, DateTime.Today.AddHours(10), Kind.Out), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(5), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
+    }
+
+    [TestMethod]
+    public async Task Overview_ThreePunchesAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(14)]);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(10), Kind.Out));
+            context.PunchEntries.Add(new(3, DateTime.Today.AddHours(12), Kind.In));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Overview();
+        Assert.IsInstanceOfType<JsonResult>(result);
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<IndexData>(jsonResult.Value);
+        IndexData model = (IndexData)jsonResult.Value;
+        Assert.AreEqual(TimeSpan.FromHours(4), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(4), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(2), model.DayBreakSum);
+        Assert.AreEqual(new(3, DateTime.Today.AddHours(12), Kind.In), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(3), model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
+    }
+    [TestMethod]
+
+    public async Task Overview_FourPunchesAdded()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(12), Kind.Out));
+            context.PunchEntries.Add(new(3, DateTime.Today.AddHours(13), Kind.In));
+            context.PunchEntries.Add(new(4, DateTime.Today.AddHours(16), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Overview();
+        Assert.IsInstanceOfType<JsonResult>(result);
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<IndexData>(jsonResult.Value);
+        IndexData model = (IndexData)jsonResult.Value;
+        Assert.AreEqual(TimeSpan.FromHours(7), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(7), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(1), model.DayBreakSum);
+        Assert.AreEqual(new(4, DateTime.Today.AddHours(16), Kind.Out), model.LastEntry);
+        Assert.AreEqual(TimeSpan.Zero, model.RemainingTime);
+        Assert.AreEqual("", model.RemainingTimeSign);
+    }
+
+    [TestMethod]
+    public async Task Overview_FourPunchesAdded_WithOvertime()
+    {
+        IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
+        using (PunchContext context = contextFactory.CreateDbContext())
+        {
+            context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
+            context.PunchEntries.Add(new(2, DateTime.Today.AddHours(12), Kind.Out));
+            context.PunchEntries.Add(new(3, DateTime.Today.AddHours(13), Kind.In));
+            context.PunchEntries.Add(new(4, DateTime.Today.AddHours(17), Kind.Out));
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+        }
+        ActionResult result = await controller.Overview();
+        Assert.IsInstanceOfType<JsonResult>(result);
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<IndexData>(jsonResult.Value);
+        IndexData model = (IndexData)jsonResult.Value;
+        Assert.AreEqual(TimeSpan.FromHours(8), model.DaySum);
+        Assert.AreEqual(TimeSpan.FromHours(8), model.WeekSum);
+        Assert.AreEqual(TimeSpan.FromHours(1), model.DayBreakSum);
+        Assert.AreEqual(new(4, DateTime.Today.AddHours(17), Kind.Out), model.LastEntry);
+        Assert.AreEqual(TimeSpan.FromHours(-1), model.RemainingTime);
+        Assert.AreEqual("-", model.RemainingTimeSign);
+    }
+
+    [TestMethod]
     public async Task Get_ReturnsPunchEntry()
     {
         IDateTimeService dateTimeService = new DateTimeService();
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -35,7 +196,9 @@ public sealed class JsonControllerTest
     {
         IDateTimeService dateTimeService = new DateTimeService();
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -50,7 +213,9 @@ public sealed class JsonControllerTest
     {
         IDateTimeService dateTimeService = new DateTimeService();
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -69,7 +234,9 @@ public sealed class JsonControllerTest
     {
         IDateTimeService dateTimeService = new DateTimeService();
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -84,7 +251,9 @@ public sealed class JsonControllerTest
     {
         IDateTimeService dateTimeService = new DateTimeService();
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -107,7 +276,9 @@ public sealed class JsonControllerTest
         DateTime fridayEOD = monday.AddDays(4).AddHours(23);
         IDateTimeService dateTimeService = new TestDateTimeService([fridayEOD]);
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -120,9 +291,9 @@ public sealed class JsonControllerTest
 
         ActionResult result = await controller.Week();
         Assert.IsInstanceOfType<JsonResult>(result);
-        JsonResult viewResult = (JsonResult)result;
-        Assert.IsInstanceOfType<Week>(viewResult.Value);
-        Week model = (Week)viewResult.Value;
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<Week>(jsonResult.Value);
+        Week model = (Week)jsonResult.Value;
         Assert.HasCount(2, model.TimeSpans);
         Assert.AreEqual(TimeSpan.FromHours(7), model.Sum);
     }
@@ -134,7 +305,9 @@ public sealed class JsonControllerTest
         DateTime fridayEOD = monday.AddDays(4).AddHours(23);
         IDateTimeService dateTimeService = new TestDateTimeService([fridayEOD]);
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -150,9 +323,9 @@ public sealed class JsonControllerTest
 
         ActionResult result = await controller.Week();
         Assert.IsInstanceOfType<JsonResult>(result);
-        JsonResult viewResult = (JsonResult)result;
-        Assert.IsInstanceOfType<Week>(viewResult.Value);
-        Week model = (Week)viewResult.Value;
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<Week>(jsonResult.Value);
+        Week model = (Week)jsonResult.Value;
         Assert.HasCount(2 * 5, model.TimeSpans);
         Assert.AreEqual(TimeSpan.FromHours(35), model.Sum);
     }
@@ -164,7 +337,9 @@ public sealed class JsonControllerTest
         DateTime fridayEOD = monday.AddDays(4).AddHours(23);
         IDateTimeService dateTimeService = new TestDateTimeService([]);
         TestPunchContextFactory contextFactory = new();
-        JsonController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        JsonController controller = new(contextFactory, aggregatorFactory, dateTimeService);
+
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -180,9 +355,9 @@ public sealed class JsonControllerTest
 
         ActionResult result = await controller.ListAll();
         Assert.IsInstanceOfType<JsonResult>(result);
-        JsonResult viewResult = (JsonResult)result;
-        Assert.IsInstanceOfType<List<PunchEntry>>(viewResult.Value);
-        List<PunchEntry> model = (List<PunchEntry>)viewResult.Value;
+        JsonResult jsonResult = (JsonResult)result;
+        Assert.IsInstanceOfType<List<PunchEntry>>(jsonResult.Value);
+        List<PunchEntry> model = (List<PunchEntry>)jsonResult.Value;
         Assert.HasCount(4 * 5, model);
     }
 }

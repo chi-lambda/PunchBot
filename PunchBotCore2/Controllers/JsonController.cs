@@ -6,12 +6,23 @@ using PunchBotCore2.Util;
 
 namespace PunchBotCore2.Controllers;
 
-public class JsonController(IDbContextFactory<PunchContext> contextFactory, IDateTimeService dateTimeService) : Controller
+public class JsonController(
+    IDbContextFactory<PunchContext> contextFactory,
+    IDataAggregatorFactory aggregatorFactory,
+    IDateTimeService dateTimeService) : Controller
 {
+    public async Task<JsonResult> Overview()
+    {
+        using PunchContext context = await contextFactory.CreateDbContextAsync();
+        DataAggregator aggregator = aggregatorFactory.Create(context);
+        return new JsonResult(await aggregator.GetIndexData());
+    }
+
     public async Task<JsonResult> Week()
     {
         using PunchContext context = await contextFactory.CreateDbContextAsync();
-        Week week = new() { TimeSpans = await context.GetWeeklyTimeSpans(dateTimeService.Now) };
+        DataAggregator aggregator = aggregatorFactory.Create(context);
+        Week week = new() { TimeSpans = await aggregator.GetWeeklyTimeSpans(dateTimeService.Now) };
         return new JsonResult(week);
     }
 

@@ -17,7 +17,9 @@ public sealed class HomeControllerTest
     public async Task Index_WorksWithInitialDatabase()
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
-        HomeController controller = new(new TestPunchContextFactory(), dateTimeService);
+        TestPunchContextFactory contextFactory = new();
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         ActionResult result = await controller.Index();
         Assert.IsInstanceOfType<ViewResult>(result);
         ViewResult viewResult = (ViewResult)result;
@@ -36,7 +38,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -60,7 +63,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(12)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -85,7 +89,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(14)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -111,7 +116,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -133,12 +139,13 @@ public sealed class HomeControllerTest
         Assert.AreEqual("", model.RemainingTimeSign);
     }
 
-[TestMethod]
+    [TestMethod]
     public async Task Index_FourPunchesAdded_WithOvertime()
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(23)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -165,7 +172,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService();
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -184,7 +192,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService();
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -203,7 +212,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService();
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
@@ -225,7 +235,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService();
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(default, DateTime.Today.AddHours(8), Kind.In));
@@ -241,7 +252,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new DateTimeService();
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         using (PunchContext context = contextFactory.CreateDbContext())
         {
             context.PunchEntries.Add(new(1, DateTime.Today.AddHours(8), Kind.In));
@@ -256,7 +268,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(8)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         await controller.Punch();
 
@@ -269,7 +282,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(10)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -290,7 +304,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today.AddHours(12)]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -312,7 +327,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([DateTime.Today]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         await controller.Holiday();
         using (PunchContext context = contextFactory.CreateDbContext())
@@ -333,7 +349,8 @@ public sealed class HomeControllerTest
         DateTime fridayEOD = monday.AddDays(4).AddHours(23);
         IDateTimeService dateTimeService = new TestDateTimeService([fridayEOD]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -360,7 +377,8 @@ public sealed class HomeControllerTest
         DateTime fridayEOD = monday.AddDays(4).AddHours(23);
         IDateTimeService dateTimeService = new TestDateTimeService([fridayEOD]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -390,7 +408,8 @@ public sealed class HomeControllerTest
         DateTime fridayEOD = monday.AddDays(4).AddHours(23);
         IDateTimeService dateTimeService = new TestDateTimeService([]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
 
         using (PunchContext context = contextFactory.CreateDbContext())
         {
@@ -417,7 +436,8 @@ public sealed class HomeControllerTest
     {
         IDateTimeService dateTimeService = new TestDateTimeService([]);
         TestPunchContextFactory contextFactory = new();
-        HomeController controller = new(contextFactory, dateTimeService);
+        TestDataAggregatorFactory aggregatorFactory = new(dateTimeService);
+        HomeController controller = new(contextFactory, aggregatorFactory, dateTimeService);
         controller.ControllerContext.HttpContext = new DefaultHttpContext();
         IActionResult result = await controller.Error();
         Assert.IsInstanceOfType<ViewResult>(result);

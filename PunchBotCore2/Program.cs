@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using AspNetCoreInjection.TypedFactories;
 using Microsoft.EntityFrameworkCore;
 using PunchBotCore2.Data;
 using PunchBotCore2.Util;
@@ -16,11 +17,13 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddControllersWithViews();
-        builder.Services.AddSingleton<IDateTimeService>(new DateTimeService());
+        builder.Services.AddSingleton<IDateTimeService, DateTimeService>();
         builder.Services.AddSingleton<LiteDB.ILiteDatabase>(new LiteDB.LiteDatabase(dbFilename));
         builder.Services.AddDbContextFactory<PunchContext>(
             options => options.UseSqlite(builder.Configuration.GetConnectionString("PunchContextSQLite")));
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+        builder.Services.AddTransient<DataAggregator>();
+        builder.Services.RegisterTypedFactory<IDataAggregatorFactory>().ForConcreteType<DataAggregator>();
 
         WebApplication app = builder.Build();
 
