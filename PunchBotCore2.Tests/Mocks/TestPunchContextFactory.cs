@@ -23,7 +23,7 @@ public class TestPunchContextFactory : IDbContextFactory<PunchContext>
         using PunchContext context = new(_contextOptions);
         context.Database.EnsureCreated();
     }
-    
+
     public PunchContext CreateDbContext()
     {
         return new PunchContext(_contextOptions);
